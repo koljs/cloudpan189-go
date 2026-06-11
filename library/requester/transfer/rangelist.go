@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -20,14 +20,15 @@ import (
 	"sync"
 	"sync/atomic"
 )
+
 type (
 	Range struct {
-		Begin                int64    `json:"begin,omitempty"`
-		End                  int64    `json:"end,omitempty"`
+		Begin int64 `json:"begin,omitempty"`
+		End   int64 `json:"end,omitempty"`
 	}
 
 	// RangeGenMode 线程分配方式
-    RangeGenMode int32
+	RangeGenMode int32
 
 	//RangeList 请求范围列表
 	RangeList []*Range
@@ -59,32 +60,32 @@ var (
 	ErrUnknownRangeGenMode = errors.New("Unknown RangeGenMode")
 )
 
-//Len 长度
+// Len 长度
 func (r *Range) Len() int64 {
 	return r.LoadEnd() - r.LoadBegin()
 }
 
-//LoadBegin 读取Begin, 原子操作
+// LoadBegin 读取Begin, 原子操作
 func (r *Range) LoadBegin() int64 {
 	return atomic.LoadInt64(&r.Begin)
 }
 
-//AddBegin 增加Begin, 原子操作
+// AddBegin 增加Begin, 原子操作
 func (r *Range) AddBegin(i int64) (newi int64) {
 	return atomic.AddInt64(&r.Begin, i)
 }
 
-//LoadEnd 读取End, 原子操作
+// LoadEnd 读取End, 原子操作
 func (r *Range) LoadEnd() int64 {
 	return atomic.LoadInt64(&r.End)
 }
 
-//StoreBegin 储存End, 原子操作
+// StoreBegin 储存End, 原子操作
 func (r *Range) StoreBegin(end int64) {
 	atomic.StoreInt64(&r.Begin, end)
 }
 
-//StoreEnd 储存End, 原子操作
+// StoreEnd 储存End, 原子操作
 func (r *Range) StoreEnd(end int64) {
 	atomic.StoreInt64(&r.End, end)
 }
@@ -94,7 +95,7 @@ func (r *Range) ShowDetails() string {
 	return fmt.Sprintf("{%d-%d}", r.LoadBegin(), r.LoadEnd())
 }
 
-//Len 获取所有的Range的剩余长度
+// Len 获取所有的Range的剩余长度
 func (rl *RangeList) Len() int64 {
 	var l int64
 	for _, wrange := range *rl {

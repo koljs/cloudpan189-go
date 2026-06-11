@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,8 +35,8 @@ type (
 
 	// 任务单元执行结果
 	TaskUnitRunResult struct {
-		Succeed       bool        // 是否执行成功
-		NeedRetry     bool        // 是否需要重试
+		Succeed   bool // 是否执行成功
+		NeedRetry bool // 是否需要重试
 
 		// 以下是额外的信息
 		Err           error       // 错误信息

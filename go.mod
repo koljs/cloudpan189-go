@@ -1,6 +1,6 @@
 module github.com/tickstep/cloudpan189-go
 
-go 1.20
+go 1.23
 
 require (
 	github.com/GeertJohan/go.incremental v1.0.0
@@ -15,7 +15,7 @@ require (
 	github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f
 )
 
-replace github.com/tickstep/cloudpan189-api => ./library/cloudpan189-api-fixed
+// 保持原版本 API 库，通过编译参数解决兼容性问题
 
 require (
 	github.com/boltdb/bolt v1.3.1 // indirect

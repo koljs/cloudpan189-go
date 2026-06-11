@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -71,7 +71,7 @@ type (
 	StatusCodeBodyCheckFunc func(respBody io.Reader) error
 )
 
-//NewDownloader 初始化Downloader
+// NewDownloader 初始化Downloader
 func NewDownloader(writer io.WriterAt, config *Config, p *cloudpan.PanClient) (der *Downloader) {
 	der = &Downloader{
 		config:    config,
@@ -82,7 +82,7 @@ func NewDownloader(writer io.WriterAt, config *Config, p *cloudpan.PanClient) (d
 	return
 }
 
-//SetClient 设置http客户端
+// SetClient 设置http客户端
 func (der *Downloader) SetFileInfo(f *cloudpan.AppFileEntity) {
 	der.fileInfo = f
 }
@@ -91,7 +91,7 @@ func (der *Downloader) SetFamilyId(familyId int64) {
 	der.familyId = familyId
 }
 
-//SetClient 设置http客户端
+// SetClient 设置http客户端
 func (der *Downloader) SetClient(client *requester.HTTPClient) {
 	der.client = client
 }
@@ -101,7 +101,7 @@ func (der *Downloader) SetLoadBalancerCompareFunc(f LoadBalancerCompareFunc) {
 	der.loadBalancerCompareFunc = f
 }
 
-//SetStatusCodeBodyCheckFunc 设置响应状态码出错的检查函数, 当FirstCheckMethod不为HEAD时才有效
+// SetStatusCodeBodyCheckFunc 设置响应状态码出错的检查函数, 当FirstCheckMethod不为HEAD时才有效
 func (der *Downloader) SetStatusCodeBodyCheckFunc(f StatusCodeBodyCheckFunc) {
 	der.statusCodeBodyCheckFunc = f
 }
@@ -280,7 +280,7 @@ func (der *Downloader) checkLoadBalancers() *LoadBalancerResponseList {
 	return loadBalancerResponseList
 }
 
-//Execute 开始任务
+// Execute 开始任务
 func (der *Downloader) Execute() error {
 	der.lazyInit()
 
@@ -435,7 +435,7 @@ func (der *Downloader) Execute() error {
 	return err
 }
 
-//downloadStatusEvent 执行状态处理事件
+// downloadStatusEvent 执行状态处理事件
 func (der *Downloader) downloadStatusEvent() {
 	if der.onDownloadStatusEvent == nil {
 		return
@@ -456,7 +456,7 @@ func (der *Downloader) downloadStatusEvent() {
 	}()
 }
 
-//Pause 暂停
+// Pause 暂停
 func (der *Downloader) Pause() {
 	if der.monitor == nil {
 		return
@@ -465,7 +465,7 @@ func (der *Downloader) Pause() {
 	der.monitor.Pause()
 }
 
-//Resume 恢复
+// Resume 恢复
 func (der *Downloader) Resume() {
 	if der.monitor == nil {
 		return
@@ -474,7 +474,7 @@ func (der *Downloader) Resume() {
 	der.monitor.Resume()
 }
 
-//Cancel 取消
+// Cancel 取消
 func (der *Downloader) Cancel() {
 	if der.monitor == nil {
 		return
@@ -483,37 +483,37 @@ func (der *Downloader) Cancel() {
 	cmdutil.Trigger(der.monitorCancelFunc)
 }
 
-//OnExecute 设置开始下载事件
+// OnExecute 设置开始下载事件
 func (der *Downloader) OnExecute(onExecuteEvent requester.Event) {
 	der.onExecuteEvent = onExecuteEvent
 }
 
-//OnSuccess 设置成功下载事件
+// OnSuccess 设置成功下载事件
 func (der *Downloader) OnSuccess(onSuccessEvent requester.Event) {
 	der.onSuccessEvent = onSuccessEvent
 }
 
-//OnFinish 设置结束下载事件
+// OnFinish 设置结束下载事件
 func (der *Downloader) OnFinish(onFinishEvent requester.Event) {
 	der.onFinishEvent = onFinishEvent
 }
 
-//OnPause 设置暂停下载事件
+// OnPause 设置暂停下载事件
 func (der *Downloader) OnPause(onPauseEvent requester.Event) {
 	der.onPauseEvent = onPauseEvent
 }
 
-//OnResume 设置恢复下载事件
+// OnResume 设置恢复下载事件
 func (der *Downloader) OnResume(onResumeEvent requester.Event) {
 	der.onResumeEvent = onResumeEvent
 }
 
-//OnCancel 设置取消下载事件
+// OnCancel 设置取消下载事件
 func (der *Downloader) OnCancel(onCancelEvent requester.Event) {
 	der.onCancelEvent = onCancelEvent
 }
 
-//OnDownloadStatusEvent 设置状态处理函数
+// OnDownloadStatusEvent 设置状态处理函数
 func (der *Downloader) OnDownloadStatusEvent(f DownloadStatusFunc) {
 	der.onDownloadStatusEvent = f
 }

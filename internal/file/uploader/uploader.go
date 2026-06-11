@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -81,12 +81,12 @@ func (u *Uploader) SetClient(c *requester.HTTPClient) {
 	u.client = c
 }
 
-//SetContentType 设置Content-Type
+// SetContentType 设置Content-Type
 func (u *Uploader) SetContentType(contentType string) {
 	u.contentType = contentType
 }
 
-//SetCheckFunc 设置上传完成的检测函数
+// SetCheckFunc 设置上传完成的检测函数
 func (u *Uploader) SetCheckFunc(checkFunc CheckFunc) {
 	u.checkFunc = checkFunc
 }

@@ -1,0 +1,50 @@
+name: Lint and security
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v8
+      with:
+        version: latest
+        args: --timeout=5m --disable=errcheck,staticcheck,ineffassign,unused
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        
+    - name: Run Gosec Security Scanner
+      uses: securego/gosec@master
+      with:
+        args: '-no-fail -fmt sarif -out results.sarif ./...'
+        
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: results.sarif

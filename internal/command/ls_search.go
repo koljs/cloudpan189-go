@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -140,11 +140,11 @@ func CmdLs() cli.Command {
 	}
 }
 
-func RunLs(familyId int64, targetPath string, lsOptions *LsOptions, orderBy cloudpan.OrderBy, orderSort cloudpan.OrderSort)  {
+func RunLs(familyId int64, targetPath string, lsOptions *LsOptions, orderBy cloudpan.OrderBy, orderSort cloudpan.OrderSort) {
 	activeUser := config.Config.ActiveUser()
 	targetPath = activeUser.PathJoin(familyId, targetPath)
-	if targetPath[len(targetPath) - 1] == '/' {
-		targetPath = text.Substr(targetPath, 0, len(targetPath) - 1)
+	if targetPath[len(targetPath)-1] == '/' {
+		targetPath = text.Substr(targetPath, 0, len(targetPath)-1)
 	}
 
 	targetPathInfo, err := activeUser.PanClient().AppFileInfoByPath(familyId, targetPath)
@@ -185,7 +185,6 @@ func RunLs(familyId int64, targetPath string, lsOptions *LsOptions, orderBy clou
 	}
 	renderTable(opLs, lsOptions.Total, targetPath, fileList)
 }
-
 
 func renderTable(op int, isTotal bool, path string, files cloudpan.AppFileList) {
 	tb := cmdtable.NewTable(os.Stdout)

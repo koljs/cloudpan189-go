@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -21,6 +21,7 @@ import (
 	"github.com/tickstep/cloudpan189-go/cmder/cmdutil"
 	"github.com/tickstep/cloudpan189-go/internal/config"
 	"github.com/tickstep/cloudpan189-go/internal/utils"
+	"github.com/tickstep/cloudpan189-go/library/requester/transfer"
 	"github.com/tickstep/library-go/cachepool"
 	"github.com/tickstep/library-go/checkaccess"
 	"github.com/tickstep/library-go/converter"
@@ -28,7 +29,6 @@ import (
 	"github.com/tickstep/library-go/jsonhelper"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
-	"github.com/tickstep/cloudpan189-go/library/requester/transfer"
 	"net/http"
 	"path/filepath"
 	"regexp"
@@ -50,9 +50,9 @@ type info struct {
 }
 
 type tsResp struct {
-	Code int `json:"code"`
+	Code int         `json:"code"`
 	Data interface{} `json:"data"`
-	Msg string `json:"msg"`
+	Msg  string      `json:"msg"`
 }
 
 func getReleaseFromTicstep(client *requester.HTTPClient, showPrompt bool) *ReleaseInfo {

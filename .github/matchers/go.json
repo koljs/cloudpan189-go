@@ -1,0 +1,45 @@
+{
+  "problemMatcher": [
+    {
+      "owner": "go-build",
+      "pattern": [
+        {
+          "regexp": "^(.+):(\\d+):(\\d+): (.+)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4
+        }
+      ]
+    },
+    {
+      "owner": "go-test",
+      "pattern": [
+        {
+          "regexp": "^--- FAIL: (.+) \\((.+)s\\)$",
+          "message": 1
+        },
+        {
+          "regexp": "^\\s+(.+):(\\d+): (.+)$",
+          "file": 1,
+          "line": 2,
+          "message": 3,
+          "loop": true
+        }
+      ]
+    },
+    {
+      "owner": "golangci-lint",
+      "pattern": [
+        {
+          "regexp": "^(.+):(\\d+):(\\d+): (.+) \\((.+)\\)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "message": 4,
+          "code": 5
+        }
+      ]
+    }
+  ]
+}

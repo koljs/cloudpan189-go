@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -16,10 +16,10 @@ package downloader
 import (
 	"errors"
 	"github.com/json-iterator/go"
+	"github.com/tickstep/cloudpan189-go/library/requester/transfer"
 	"github.com/tickstep/library-go/cachepool"
 	"github.com/tickstep/library-go/crypto"
 	"github.com/tickstep/library-go/logger"
-	"github.com/tickstep/cloudpan189-go/library/requester/transfer"
 	"os"
 	"sync"
 )
@@ -44,7 +44,7 @@ const (
 	InstanceStateStorageFormatProto3
 )
 
-//NewInstanceState 初始化InstanceState
+// NewInstanceState 初始化InstanceState
 func NewInstanceState(saveFile *os.File, format InstanceStateStorageFormat) *InstanceState {
 	return &InstanceState{
 		saveFile: saveFile,
@@ -78,7 +78,7 @@ func (is *InstanceState) getSaveFileContents() []byte {
 	return crypto.Base64Decode(buf[:n])
 }
 
-//Get 获取断点续传信息
+// Get 获取断点续传信息
 func (is *InstanceState) Get() (eii *transfer.DownloadInstanceInfo) {
 	if !is.checkSaveFile() {
 		return nil
@@ -105,7 +105,7 @@ func (is *InstanceState) Get() (eii *transfer.DownloadInstanceInfo) {
 	return
 }
 
-//Put 提交断点续传信息
+// Put 提交断点续传信息
 func (is *InstanceState) Put(eii *transfer.DownloadInstanceInfo) {
 	if !is.checkSaveFile() {
 		return
@@ -138,7 +138,7 @@ func (is *InstanceState) Put(eii *transfer.DownloadInstanceInfo) {
 	}
 }
 
-//Close 关闭
+// Close 关闭
 func (is *InstanceState) Close() error {
 	if !is.checkSaveFile() {
 		return nil

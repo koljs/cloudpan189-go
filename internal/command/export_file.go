@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -31,9 +31,9 @@ import (
 
 type (
 	ImportExportFileItem struct {
-		FileMd5 string `json:"md5"`
-		FileSize int64 `json:"size"`
-		Path string `json:"path"`
+		FileMd5    string `json:"md5"`
+		FileSize   int64  `json:"size"`
+		Path       string `json:"path"`
 		LastOpTime string `json:"lastOpTime"`
 	}
 )
@@ -84,12 +84,11 @@ func CmdExport() cli.Command {
 	}
 }
 
-
 func RunExportFiles(familyId int64, overwrite bool, panPaths []string, saveLocalFilePath string) {
 	activeUser := config.Config.ActiveUser()
 	panClient := activeUser.PanClient()
 
-	lfi,_ := os.Stat(saveLocalFilePath)
+	lfi, _ := os.Stat(saveLocalFilePath)
 	realSaveFilePath := saveLocalFilePath
 	if lfi != nil {
 		if lfi.IsDir() {
@@ -103,7 +102,7 @@ func RunExportFiles(familyId int64, overwrite bool, panPaths []string, saveLocal
 	} else {
 		// create file
 		localDir := path.Dir(saveLocalFilePath)
-		dirFs,_ := os.Stat(localDir)
+		dirFs, _ := os.Stat(localDir)
 		if dirFs != nil {
 			if !dirFs.IsDir() {
 				fmt.Println("指定的保存文件路径不合法")
@@ -126,7 +125,7 @@ func RunExportFiles(familyId int64, overwrite bool, panPaths []string, saveLocal
 		return
 	}
 
-	for _,panPath := range panPaths {
+	for _, panPath := range panPaths {
 		panPath = activeUser.PathJoin(familyId, panPath)
 		panClient.AppFilesDirectoriesRecurseList(familyId, panPath, func(depth int, _ string, fd *cloudpan.AppFileEntity, apiError *apierror.ApiError) bool {
 			if apiError != nil {
@@ -137,12 +136,12 @@ func RunExportFiles(familyId int64, overwrite bool, panPaths []string, saveLocal
 			// 只需要存储文件即可
 			if !fd.IsFolder {
 				item := ImportExportFileItem{
-					FileMd5: fd.FileMd5,
-					FileSize: fd.FileSize,
-					Path: fd.Path,
+					FileMd5:    fd.FileMd5,
+					FileSize:   fd.FileSize,
+					Path:       fd.Path,
 					LastOpTime: fd.LastOpTime,
 				}
-				jstr,e := json.Marshal(&item)
+				jstr, e := json.Marshal(&item)
 				if e != nil {
 					logger.Verboseln("to json string err")
 					return false

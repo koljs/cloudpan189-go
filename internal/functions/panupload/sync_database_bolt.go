@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -41,7 +41,7 @@ type boltKV struct {
 }
 
 func openBoltDb(file string, bucket string) (SyncDb, error) {
-	db, err := bolt.Open(file + "_bolt.db", 0600, &bolt.Options{Timeout: 5 * time.Second})
+	db, err := bolt.Open(file+"_bolt.db", 0600, &bolt.Options{Timeout: 5 * time.Second})
 
 	if err != nil {
 		return nil, err
@@ -138,7 +138,7 @@ func (db *boltDB) First(prefix string) (*UploadedFileMeta, error) {
 
 func (db *boltDB) Next(prefix string) (*UploadedFileMeta, error) {
 	data := &UploadedFileMeta{}
-	if _,ok := db.next[prefix]; ok {
+	if _, ok := db.next[prefix]; ok {
 		if db.next[prefix].off >= db.next[prefix].size {
 			return nil, fmt.Errorf("no any more record")
 		}
@@ -165,7 +165,7 @@ func (db *boltDB) Put(key string, value *UploadedFileMeta) error {
 		}
 		b := tx.Bucket([]byte(db.bucket))
 		if b == nil {
-			b,err = tx.CreateBucket([]byte(db.bucket))
+			b, err = tx.CreateBucket([]byte(db.bucket))
 			if err != nil {
 				return err
 			}

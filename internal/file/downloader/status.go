@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -65,7 +65,7 @@ const (
 	StatusCodeDownloadUrlExpired
 )
 
-//GetStatusText 根据状态码获取状态信息
+// GetStatusText 根据状态码获取状态信息
 func GetStatusText(sc StatusCode) string {
 	switch sc {
 	case StatusCodeInit:
@@ -97,24 +97,24 @@ func GetStatusText(sc StatusCode) string {
 	}
 }
 
-//NewWorkerStatus 初始化WorkerStatus
+// NewWorkerStatus 初始化WorkerStatus
 func NewWorkerStatus() *WorkerStatus {
 	return &WorkerStatus{
 		statusCode: StatusCodeInit,
 	}
 }
 
-//SetStatusCode 设置worker状态码
+// SetStatusCode 设置worker状态码
 func (ws *WorkerStatus) SetStatusCode(sc StatusCode) {
 	ws.statusCode = sc
 }
 
-//StatusCode 返回状态码
+// StatusCode 返回状态码
 func (ws *WorkerStatus) StatusCode() StatusCode {
 	return ws.statusCode
 }
 
-//StatusText 返回状态信息
+// StatusText 返回状态信息
 func (ws *WorkerStatus) StatusText() string {
 	return GetStatusText(ws.statusCode)
 }

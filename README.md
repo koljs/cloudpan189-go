@@ -1,5 +1,38 @@
-# 重要说明！！！
-本项目已经不再维护，感谢项目的各位共享者以及使用者对本项目的厚爱。
+# 🆕 v0.1.5 版本更新 - Go 1.23+ 兼容性和错误处理修复
+
+## 最新修复 (v0.1.5)
+- 🔧 **修复 Go 1.23+ 编译兼容性问题**：解决 "invalid reference to runtime.rawbyteslice" 编译错误，支持最新 Go 版本
+- 🛡️ **修复登录错误处理缺陷**：解决登录失败时显示 `<nil>` 错误信息的问题，现在显示具体错误代码和描述
+- ⚡ **增强错误类型处理**：修正 `*apierror.ApiError` 类型处理，提供准确的错误诊断信息
+- 🏗️ **完善构建系统**：更新 Makefile 和测试流程，确保在所有 Go 版本下正常编译和测试
+
+## v0.1.4 核心修复
+- 🔧 **修复登录认证失败问题**：解决 "index out of range [1] with length 0" 崩溃错误
+- ✅ **解决 "未登录账号" 错误**：修复用户在 APP 登录成功后仍显示未登录的问题  
+- ⚡ **实现合成令牌回退系统**：当网页 Cookie 获取失败时，自动使用 APP 令牌维持完整功能
+- 📱 **完全向后兼容**：现有用户无需任何操作，新用户自动享受修复后的稳定登录体验
+
+
+## 技术改进
+- 🔗 **Go 1.23+ 兼容性**：添加 `-ldflags="-checklinkname=0"` 编译参数，支持最新 Go 版本
+- 🎯 **精确错误诊断**：修正 ApiError 类型处理，提供具体错误代码和描述信息
+- 🛡️ **增强异常保护**：完善 panic recovery 机制，提高登录流程稳定性
+- 🏗️ **构建系统优化**：更新 Makefile 和测试流程，确保跨版本兼容性
+
+详细的技术说明请查看：[README-v0.1.5.md](README-v0.1.5.md)
+
+---------------------------------------------------------------------------
+# 关于 “设备ID不存在，需要二次设备校验 ” 问题
+
+1. 你可以试试在天翼云盘APP上面点“我的” > "设置" > "账号与安全"下面把设备锁关闭。
+
+2. 设备锁关闭的时候提示“状态获取失败”，无法关闭设备锁怎么办？
+
+3. 在网页端登录天翼账号 https://e.dlife.cn/user/index.do ；点击 “账号安全” > 关闭 “设备锁”。
+
+![](./assets/deviceID_issues.png)
+
+---------------------------------------------------------------------------
 
 # 关于
 天翼云盘CLI，基于GO语言实现。仿 Linux shell 文件处理命令的天翼云盘命令行客户端。
@@ -40,7 +73,7 @@
 
 # 如何安装
 ## 直接下载安装
-可以直接在本仓库 [发布页](https://github.com/tickstep/cloudpan189-go/releases) 下载安装包，解压后使用。
+可以直接在本仓库 [发布页](https://github.com/MaurUppi/cloudpan189-go/releases) 下载安装包，解压后使用。
 
 要特别注意安装包的标签，不同的标签对应不同架构的系统，相关版本文件的标签说明如下：
 1. arm / armv5 / armv7 : 适用32位ARM系统
@@ -53,49 +86,10 @@
 
 参考例子：
 ```shell
-wget https://github.com/tickstep/cloudpan189-go/releases/download/v0.1.3/cloudpan189-go-v0.1.3-linux-amd64.zip
-unzip cloudpan189-go-v0.1.3-linux-amd64.zip
-cd cloudpan189-go-v0.1.3-linux-amd64
+wget https://github.com/MaurUppi/cloudpan189-go/releases/download/v0.1.5/cloudpan189-go-v0.1.5-linux-amd64.tar.gz
+unzip cloudpan189-go-v0.1.5-linux-amd64.tar.gz
+cd cloudpan189-go-v0.1.5-linux-amd64
 ./cloudpan189-go
-```
-
-## apt安装
-适用于apt包管理器的系统，例如Ubuntu，国产deepin深度操作系统等。目前只支持amd64和arm64架构的机器。
-```shell
-sudo curl -fsSL http://file.tickstep.com/apt/pgp | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/tickstep-packages-archive-keyring.gpg > /dev/null && echo "deb [signed-by=/etc/apt/trusted.gpg.d/tickstep-packages-archive-keyring.gpg arch=amd64,arm64] http://file.tickstep.com/apt cloudpan189-go main" | sudo tee /etc/apt/sources.list.d/tickstep-cloudpan189-go.list > /dev/null && sudo apt-get update && sudo apt-get install -y cloudpan189-go
- 
-```
-
-## yum安装
-适用于yum包管理器的系统，例如CentOS、RockyLinux等。目前只支持amd64和arm64架构的机器。
-```shell
-sudo curl -fsSL http://file.tickstep.com/rpm/cloudpan189-go/cloudpan189-go.repo | sudo tee /etc/yum.repos.d/tickstep-cloudpan189-go.repo > /dev/null && sudo yum install cloudpan189-go -y
- 
-```
-
-## brew安装
-适用于brew包管理器的系统，主要是苹果macOS系统。目前只支持amd64和arm64架构(Apple Silicon)的机器。
-```shell
-brew install cloudpan189-go
-    
-```
-由于brew默认安装在系统目录下面，这样配置文件也默认存放在系统目录里了，建议设置系统变量进行配置文件的单独存储，例如
-```shell
-export CLOUD189_CONFIG_DIR=/Users/tickstep/Applications/cloud189/config
-```
-
-## winget安装
-适用于Windows系统的winget包管理器。目前只支持x86和x64架构的机器。
-
-更新源（可选）
-```powershell
-winget source update
- 
-```
-安装
-```powershell
-winget install tickstep.cloudpan189-go --silent
- 
 ```
 
 # 如何使用
@@ -123,13 +117,13 @@ winget install tickstep.cloudpan189-go --silent
 你可以指定程序配置文件的存储路径，如果没有指定，程序会使用默认的目录。   
 方法为设置环境变量`CLOUD189_CONFIG_DIR`并指定一个存在的目录，例如linux下面可以这样指定
 ```shell
-export CLOUD189_CONFIG_DIR=/Users/tickstep/Applications/cloud189/config
+export CLOUD189_CONFIG_DIR=/Users/MaurUppi/Applications/cloud189/config
 ```
 
 ### 启动程序
 直接启动进入交互命令行
 ```shell
-[tickstep@MacPro ~]$ cloudpan189-go
+[MaurUppi@MacPro ~]$ cloudpan189-go
 提示: 方向键上下可切换历史命令.
 提示: Ctrl + A / E 跳转命令 首 / 尾.
 提示: 输入 help 获取帮助.
@@ -163,15 +157,15 @@ cloudpan189-go > help
 ### 登录
 需要先登录，已经登录过的可以跳过此步。登录成功后账号会加密存储在配置文件中，下一次程序启动会自动登录无需再次输入账号。
 ```shell
-cloudpan189-go > login -username=131xxxxxx01@189.cn -password=123xxx
+cloudpan189-go > login -username=xxxxxxxxx01@189.cn -password=123xxx
 
-天翼云盘登录成功:  tickstep
-cloudpan189-go:/ tickstep$ 
+天翼云盘登录成功:  MaurUppi
+cloudpan189-go:/ MaurUppi$ 
 ```
 
 ### 查看文件列表
 ```shell
-cloudpan189-go:/ tickstep$ ls
+cloudpan189-go:/ MaurUppi$ ls
   #   文件大小       修改日期               文件(目录)          
    0         -  2023-03-31 00:04:59  同步盘/                    
    1         -  2023-03-31 00:04:59  我的图片/                  
@@ -190,7 +184,7 @@ cloudpan189-go:/ tickstep$ ls
 
 ### 下载文件
 ```shell
-cloudpan189-go:/ tickstep$ download 512.png
+cloudpan189-go:/ MaurUppi$ download 512.png
 
 [0] 提示: 当前下载最大并发量为: 5, 下载缓存为: 65536
 [1] 加入下载队列: /我的图片/512.png
@@ -202,24 +196,24 @@ cloudpan189-go:/ tickstep$ download 512.png
 文件路径: /我的图片/512.png
 
 [1] 准备下载: /我的图片/512.png
-[1] 将会下载到路径: /Users/tickstep/Downloads/761169075/我的图片/512.png
+[1] 将会下载到路径: /Users/MaurUppi/Downloads/761169075/我的图片/512.png
 
 [1] 下载开始
 
 
-[1] 下载完成, 保存位置: /Users/tickstep/Downloads/761169075/我的图片/512.png
-[1] 检验文件有效性成功: /Users/tickstep/Downloads/761169075/我的图片/512.png
+[1] 下载完成, 保存位置: /Users/MaurUppi/Downloads/761169075/我的图片/512.png
+[1] 检验文件有效性成功: /Users/MaurUppi/Downloads/761169075/我的图片/512.png
 
 下载结束, 时间: 1.361s, 数据总量: 47.830078KB
-cloudpan189-go:/ tickstep$ 
+cloudpan189-go:/ MaurUppi$ 
 ```
 支持并发同时下载文件，默认并发数是5个文件，你可以通过config进行修改。同时支持文件过滤。
 
 ### 上传文件
 ```shell
-cloudpan189-go:/ tickstep$ upload /Users/tickstep/Downloads/app.zip /tmp
-2023-04-06 22:06:17 [1] 加入上传队列: /Users/tickstep/Downloads/app.zip
-[1] 准备上传: /Users/tickstep/Downloads/app.zip=>/tmp/app.zip
+cloudpan189-go:/ MaurUppi$ upload /Users/MaurUppi/Downloads/app.zip /tmp
+2023-04-06 22:06:17 [1] 加入上传队列: /Users/MaurUppi/Downloads/app.zip
+[1] 准备上传: /Users/MaurUppi/Downloads/app.zip=>/tmp/app.zip
 [1] 检测秒传中, 请稍候...
 [1] 秒传失败，开始正常上传文件
 [1] ↑ 7.21MB/7.21MB 0B/s in 3s ................
@@ -227,25 +221,25 @@ cloudpan189-go:/ tickstep$ upload /Users/tickstep/Downloads/app.zip /tmp
 2023-04-06 22:06:23 [1] 文件上传结果：成功！  耗时 5.400578399s
 
 上传结束, 时间: 5.4s, 总大小: 7.211734MB
-cloudpan189-go:/ tickstep$ 
+cloudpan189-go:/ MaurUppi$ 
 ```
 上传也支持并发，默认并发数是10个文件，你可以通过config进行修改。同时支持文件过滤。
 
 ### 创建分享链接
 ```shell
-cloudpan189-go:/ tickstep$ share set /tmp/app.zip 
+cloudpan189-go:/ MaurUppi$ share set /tmp/app.zip 
 路径: /tmp/app.zip
 链接: https://cloud.189.cn/t/UbqQnuEnyAJn（访问码：nq0c）
-cloudpan189-go:/ tickstep$ 
+cloudpan189-go:/ MaurUppi$ 
 ```
 
 ### 签到
 ```shell
-cloudpan189-go:/ tickstep$ sign
+cloudpan189-go:/ MaurUppi$ sign
 签到成功，获得37M空间
 第1次抽奖成功: 天翼云盘50M空间
 第2次抽奖成功: 天翼云盘50M空间
-cloudpan189-go:/ tickstep$ 
+cloudpan189-go:/ MaurUppi$ 
 ```
 
 ## 更多命令
@@ -272,11 +266,10 @@ Windows
 ![](./assets/images/debug-log-screenshot.png)
 
 # 交流反馈
-提交issue: [issues页面](https://github.com/tickstep/cloudpan189-go/issues)   
-联系邮箱: tickstep@outlook.com
+提交issue: [issues页面](https://github.com/MaurUppi/cloudpan189-go/issues)   
 
 # 鸣谢
-本项目大量借鉴了以下相关项目的功能&成果   
+本项目大量借鉴了以下相关项目的功能&成果
+> [tickstep/cloudpan189-go](https://github.com/tickstep/cloudpan189-go)  
 > [iikira/BaiduPCS-Go](https://github.com/iikira/BaiduPCS-Go)   
 > [Aruelius/cloud189](https://github.com/Aruelius/cloud189)   
-

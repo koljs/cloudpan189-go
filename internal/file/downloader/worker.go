@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"github.com/tickstep/cloudpan189-api/cloudpan"
 	"github.com/tickstep/cloudpan189-api/cloudpan/apierror"
+	"github.com/tickstep/cloudpan189-go/library/requester/transfer"
 	"github.com/tickstep/library-go/cachepool"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio/speeds"
-	"github.com/tickstep/cloudpan189-go/library/requester/transfer"
 	"io"
 	"net/http"
 	"sync"
@@ -66,18 +66,18 @@ func (wl WorkerList) Duplicate() WorkerList {
 	return n
 }
 
-//NewWorker 初始化Worker
+// NewWorker 初始化Worker
 func NewWorker(id int, familyId int64, fileId, durl string, writerAt io.WriterAt) *Worker {
 	return &Worker{
 		id:       id,
 		url:      durl,
 		writerAt: writerAt,
-		fileId: fileId,
+		fileId:   fileId,
 		familyId: familyId,
 	}
 }
 
-//ID 返回worker ID
+// ID 返回worker ID
 func (wer *Worker) ID() int {
 	return wer.id
 }
@@ -107,7 +107,7 @@ func (wer *Worker) SetTotalSize(size int64) {
 	wer.totalSize = size
 }
 
-//SetClient 设置http客户端
+// SetClient 设置http客户端
 func (wer *Worker) SetClient(c *requester.HTTPClient) {
 	wer.client = c
 }
@@ -116,12 +116,12 @@ func (wer *Worker) SetPanClient(p *cloudpan.PanClient) {
 	wer.panClient = p
 }
 
-//SetAcceptRange 设置AcceptRange
+// SetAcceptRange 设置AcceptRange
 func (wer *Worker) SetAcceptRange(acceptRanges string) {
 	wer.acceptRanges = acceptRanges
 }
 
-//SetRange 设置请求范围
+// SetRange 设置请求范围
 func (wer *Worker) SetRange(r *transfer.Range) {
 	if wer.wrange == nil {
 		wer.wrange = r
@@ -131,33 +131,33 @@ func (wer *Worker) SetRange(r *transfer.Range) {
 	wer.wrange.StoreEnd(r.LoadEnd())
 }
 
-//SetWriteMutex 设置数据写锁
+// SetWriteMutex 设置数据写锁
 func (wer *Worker) SetWriteMutex(mu *sync.Mutex) {
 	wer.writeMu = mu
 }
 
-//SetDownloadStatus 增加其他需要统计的数据
+// SetDownloadStatus 增加其他需要统计的数据
 func (wer *Worker) SetDownloadStatus(downloadStatus *transfer.DownloadStatus) {
 	wer.downloadStatus = downloadStatus
 }
 
-//GetStatus 返回下载状态
+// GetStatus 返回下载状态
 func (wer *Worker) GetStatus() WorkerStatuser {
 	// 空接口与空指针不等价
 	return &wer.status
 }
 
-//GetRange 返回worker范围
+// GetRange 返回worker范围
 func (wer *Worker) GetRange() *transfer.Range {
 	return wer.wrange
 }
 
-//GetSpeedsPerSecond 获取每秒的速度
+// GetSpeedsPerSecond 获取每秒的速度
 func (wer *Worker) GetSpeedsPerSecond() int64 {
 	return wer.speedsStat.GetSpeeds()
 }
 
-//Pause 暂停下载
+// Pause 暂停下载
 func (wer *Worker) Pause() {
 	wer.lazyInit()
 	if wer.acceptRanges == "" {
@@ -172,7 +172,7 @@ func (wer *Worker) Pause() {
 	wer.status.statusCode = StatusCodePaused
 }
 
-//Resume 恢复下载
+// Resume 恢复下载
 func (wer *Worker) Resume() {
 	if wer.status.statusCode != StatusCodePaused {
 		return
@@ -180,7 +180,7 @@ func (wer *Worker) Resume() {
 	go wer.Execute()
 }
 
-//Cancel 取消下载
+// Cancel 取消下载
 func (wer *Worker) Cancel() error {
 	if wer.workerCancelFunc == nil {
 		return errors.New("cancelFunc not set")
@@ -192,7 +192,7 @@ func (wer *Worker) Cancel() error {
 	return nil
 }
 
-//Reset 重设连接
+// Reset 重设连接
 func (wer *Worker) Reset() {
 	if wer.resetFunc == nil {
 		logger.Verbosef("DEBUG: worker: resetFunc not set")
@@ -228,7 +228,7 @@ func (wer *Worker) Canceled() bool {
 	return wer.status.statusCode == StatusCodeCanceled
 }
 
-//Completed 是否已经完成
+// Completed 是否已经完成
 func (wer *Worker) Completed() bool {
 	switch wer.status.statusCode {
 	case StatusCodeSuccessed, StatusCodeCanceled:
@@ -238,7 +238,7 @@ func (wer *Worker) Completed() bool {
 	}
 }
 
-//Failed 是否失败
+// Failed 是否失败
 func (wer *Worker) Failed() bool {
 	switch wer.status.statusCode {
 	case StatusCodeFailed, StatusCodeInternalError, StatusCodeTooManyConnections, StatusCodeNetError:
@@ -248,17 +248,17 @@ func (wer *Worker) Failed() bool {
 	}
 }
 
-//ClearStatus 清空状态
+// ClearStatus 清空状态
 func (wer *Worker) ClearStatus() {
 	wer.status.statusCode = StatusCodeInit
 }
 
-//Err 返回worker错误
+// Err 返回worker错误
 func (wer *Worker) Err() error {
 	return wer.err
 }
 
-//Execute 执行任务
+// Execute 执行任务
 func (wer *Worker) Execute() {
 	wer.lazyInit()
 
@@ -301,7 +301,7 @@ func (wer *Worker) Execute() {
 
 	apierr := wer.panClient.AppDownloadFileData(wer.url, cloudpan.AppFileDownloadRange{
 		Offset: wer.wrange.Begin,
-		End: wer.wrange.End - 1,
+		End:    wer.wrange.End - 1,
 	}, func(httpMethod, fullUrl string, headers map[string]string) (*http.Response, error) {
 		resp, wer.err = wer.client.Req(httpMethod, fullUrl, nil, headers)
 		if wer.err != nil {

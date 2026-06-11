@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -224,7 +224,7 @@ func (dtu *DownloadTaskUnit) download() (err error) {
 	return nil
 }
 
-//panHTTPClient 获取包含特定User-Agent的HTTPClient
+// panHTTPClient 获取包含特定User-Agent的HTTPClient
 func (dtu *DownloadTaskUnit) panHTTPClient() (client *requester.HTTPClient) {
 	client = requester.NewHTTPClient()
 	client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
@@ -257,7 +257,7 @@ func (dtu *DownloadTaskUnit) handleError(result *taskframework.TaskUnitRunResult
 	}
 }
 
-//checkFileValid 检测文件有效性
+// checkFileValid 检测文件有效性
 func (dtu *DownloadTaskUnit) checkFileValid(result *taskframework.TaskUnitRunResult) (ok bool) {
 	if dtu.NoCheck {
 		// 不检测文件有效性

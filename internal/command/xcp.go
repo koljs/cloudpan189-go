@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -107,12 +107,12 @@ func RunXCopy(source FileSourceType, familyId int64, paths ...string) {
 
 	// use the first family as default
 	if familyId == 0 {
-		familyResult,err := activeUser.PanClient().AppFamilyGetFamilyList()
+		familyResult, err := activeUser.PanClient().AppFamilyGetFamilyList()
 		if err != nil {
 			fmt.Println("获取家庭列表失败")
 			return
 		}
-		for _,f := range familyResult.FamilyInfoList {
+		for _, f := range familyResult.FamilyInfoList {
 			if f.UserRole == 1 {
 				familyId = f.FamilyId
 			}
@@ -134,7 +134,7 @@ func RunXCopy(source FileSourceType, familyId int64, paths ...string) {
 		return
 	}
 
-	if err !=  nil {
+	if err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -144,14 +144,14 @@ func RunXCopy(source FileSourceType, familyId int64, paths ...string) {
 	}
 
 	fileIdList := []string{}
-	for _,fi := range opFileList {
+	for _, fi := range opFileList {
 		fileIdList = append(fileIdList, fi.FileId)
 	}
 
 	switch source {
 	case FamilyCloud:
 		// copy to person cloud
-		_,e1 := activeUser.PanClient().AppFamilySaveFileToPersonCloud(familyId, fileIdList)
+		_, e1 := activeUser.PanClient().AppFamilySaveFileToPersonCloud(familyId, fileIdList)
 		if e1 != nil {
 			if e1.ErrCode() == apierror.ApiCodeFileAlreadyExisted {
 				fmt.Println("复制失败，个人云已经存在对应的文件")
@@ -163,7 +163,7 @@ func RunXCopy(source FileSourceType, familyId int64, paths ...string) {
 		break
 	case PersonCloud:
 		// copy to family cloud
-		_,e1 := activeUser.PanClient().AppSaveFileToFamilyCloud(familyId, fileIdList)
+		_, e1 := activeUser.PanClient().AppSaveFileToFamilyCloud(familyId, fileIdList)
 		if e1 != nil {
 			if e1.ErrCode() == apierror.ApiCodeFileAlreadyExisted {
 				fmt.Println("复制失败，家庭云已经存在对应的文件")
@@ -180,7 +180,7 @@ func RunXCopy(source FileSourceType, familyId int64, paths ...string) {
 
 	if len(failedPaths) > 0 {
 		fmt.Println("以下文件复制失败：")
-		for _,f := range failedPaths {
+		for _, f := range failedPaths {
 			fmt.Println(f)
 		}
 		fmt.Println("")
@@ -190,14 +190,14 @@ func RunXCopy(source FileSourceType, familyId int64, paths ...string) {
 	case FamilyCloud:
 		// copy to person cloud
 		fmt.Println("成功复制以下文件到个人云目录 /来自家庭共享")
-		for _,fi := range opFileList {
+		for _, fi := range opFileList {
 			fmt.Println(fi.Path)
 		}
 		break
 	case PersonCloud:
 		// copy to family cloud
 		fmt.Println("成功复制以下文件到家庭云根目录")
-		for _,fi := range opFileList {
+		for _, fi := range opFileList {
 			fmt.Println(fi.Path)
 		}
 		break

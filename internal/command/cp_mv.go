@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -107,7 +107,7 @@ func RunCopy(paths ...string) {
 	familyId := int64(0)
 	activeUser := GetActiveUser()
 	opFileList, targetFile, _, err := getFileInfo(familyId, paths...)
-	if err !=  nil {
+	if err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -122,8 +122,8 @@ func RunCopy(paths ...string) {
 
 	// create task
 	taskParam := &cloudpan.BatchTaskParam{
-		TypeFlag: cloudpan.BatchTaskTypeCopy,
-		TaskInfos: makeBatchTaskInfoList(opFileList),
+		TypeFlag:       cloudpan.BatchTaskTypeCopy,
+		TaskInfos:      makeBatchTaskInfoList(opFileList),
 		TargetFolderId: targetFile.FileId,
 	}
 
@@ -151,12 +151,11 @@ func RunCopy(paths ...string) {
 	}
 }
 
-
 // RunMove 执行移动文件/目录
 func RunMove(familyId int64, paths ...string) {
 	activeUser := GetActiveUser()
 	opFileList, targetFile, _, err := getFileInfo(familyId, paths...)
-	if err !=  nil {
+	if err != nil {
 		fmt.Println(err)
 		return
 	}
@@ -172,8 +171,8 @@ func RunMove(familyId int64, paths ...string) {
 	if IsFamilyCloud(familyId) {
 		failedMoveFiles := []*cloudpan.AppFileEntity{}
 		b := false
-		for _,mfi := range opFileList {
-			_,er := activeUser.PanClient().AppFamilyMoveFile(familyId, mfi.FileId, targetFile.FileId)
+		for _, mfi := range opFileList {
+			_, er := activeUser.PanClient().AppFamilyMoveFile(familyId, mfi.FileId, targetFile.FileId)
 			if er != nil {
 				failedMoveFiles = append(failedMoveFiles, mfi)
 			}
@@ -181,7 +180,7 @@ func RunMove(familyId int64, paths ...string) {
 		}
 		if len(failedMoveFiles) > 0 {
 			fmt.Println("以下文件移动失败：")
-			for _,f := range failedMoveFiles {
+			for _, f := range failedMoveFiles {
 				fmt.Println(f.FileName)
 			}
 			fmt.Println("")
@@ -194,8 +193,8 @@ func RunMove(familyId int64, paths ...string) {
 	} else {
 		// create task
 		taskParam := &cloudpan.BatchTaskParam{
-			TypeFlag: cloudpan.BatchTaskTypeMove,
-			TaskInfos: makeBatchTaskInfoList(opFileList),
+			TypeFlag:       cloudpan.BatchTaskTypeMove,
+			TaskInfos:      makeBatchTaskInfoList(opFileList),
 			TargetFolderId: targetFile.FileId,
 		}
 
@@ -248,9 +247,9 @@ func makeBatchTaskInfoList(opFileList []*cloudpan.AppFileEntity) (infoList cloud
 			isFolder = 1
 		}
 		infoItem := &cloudpan.BatchTaskInfo{
-			FileId: fe.FileId,
-			FileName: fe.FileName,
-			IsFolder: isFolder,
+			FileId:      fe.FileId,
+			FileName:    fe.FileName,
+			IsFolder:    isFolder,
 			SrcParentId: fe.ParentId,
 		}
 		infoList = append(infoList, infoItem)
