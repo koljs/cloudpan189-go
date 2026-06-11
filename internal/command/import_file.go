@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -33,7 +33,7 @@ import (
 
 type (
 	dirFileListData struct {
-		Dir *cloudpan.AppMkdirResult
+		Dir  *cloudpan.AppMkdirResult
 		File *cloudpan.AppFileListResult
 	}
 )
@@ -103,7 +103,7 @@ func CmdImport() cli.Command {
 }
 
 func RunImportFiles(familyId int64, overwrite bool, panSavePath, localFilePath string) {
-	lfi,_ := os.Stat(localFilePath)
+	lfi, _ := os.Stat(localFilePath)
 	if lfi != nil {
 		if lfi.IsDir() {
 			fmt.Println("请指定导入文件")
@@ -129,7 +129,7 @@ func RunImportFiles(familyId int64, overwrite bool, panSavePath, localFilePath s
 	}
 	defer importFile.Close()
 
-	fileData,err := ioutil.ReadAll(importFile)
+	fileData, err := ioutil.ReadAll(importFile)
 	if err != nil {
 		fmt.Println("读取文件出错")
 		return
@@ -142,7 +142,7 @@ func RunImportFiles(familyId int64, overwrite bool, panSavePath, localFilePath s
 	fileText = strings.TrimSpace(fileText)
 	fileLines := strings.Split(fileText, "\n")
 	importFileItems := []ImportExportFileItem{}
-	for _,line := range fileLines {
+	for _, line := range fileLines {
 		line = strings.TrimSpace(line)
 		item := &ImportExportFileItem{}
 		if err := json.Unmarshal([]byte(line), item); err != nil {
@@ -164,7 +164,7 @@ func RunImportFiles(familyId int64, overwrite bool, panSavePath, localFilePath s
 	fmt.Println("正在导入...")
 	successImportFiles := []ImportExportFileItem{}
 	failedImportFiles := []ImportExportFileItem{}
-	for _,item := range importFileItems {
+	for _, item := range importFileItems {
 		fmt.Printf("正在处理导入: %s\n", item.Path)
 		result, abort := processOneImport(familyId, overwrite, dirMap, item)
 		if abort {
@@ -180,7 +180,7 @@ func RunImportFiles(familyId int64, overwrite bool, panSavePath, localFilePath s
 	}
 	if len(failedImportFiles) > 0 {
 		fmt.Println("\n以下文件导入失败")
-		for _,f := range failedImportFiles {
+		for _, f := range failedImportFiles {
 			fmt.Printf("%s %s\n", f.FileMd5, f.Path)
 		}
 		fmt.Println("")
@@ -190,13 +190,13 @@ func RunImportFiles(familyId int64, overwrite bool, panSavePath, localFilePath s
 
 func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFileListData, item ImportExportFileItem) (result, abort bool) {
 	panClient := config.Config.ActiveUser().PanClient()
-	panDir,fileName := path.Split(item.Path)
+	panDir, fileName := path.Split(item.Path)
 	dataItem := dirMap[path.Dir(panDir)]
 	if isOverwrite {
 		// 标记覆盖旧同名文件
 		// 检查同名文件是否存在
 		var efi *cloudpan.AppFileEntity = nil
-		for _,fileItem := range dataItem.File.FileList {
+		for _, fileItem := range dataItem.File.FileList {
 			if !fileItem.IsFolder && fileItem.FileName == fileName {
 				efi = fileItem
 				break
@@ -210,14 +210,14 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 				isFolder = 1
 			}
 			infoItem := &cloudpan.BatchTaskInfo{
-				FileId: efi.FileId,
-				FileName: efi.FileName,
-				IsFolder: isFolder,
+				FileId:      efi.FileId,
+				FileName:    efi.FileName,
+				IsFolder:    isFolder,
 				SrcParentId: efi.ParentId,
 			}
 			infoList = append(infoList, infoItem)
 			delParam := &cloudpan.BatchTaskParam{
-				TypeFlag: cloudpan.BatchTaskTypeDelete,
+				TypeFlag:  cloudpan.BatchTaskTypeDelete,
 				TaskInfos: infoList,
 			}
 
@@ -246,12 +246,12 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 	}
 	appCreateUploadFileParam := &cloudpan.AppCreateUploadFileParam{
 		ParentFolderId: dataItem.Dir.FileId,
-		FileName: fileName,
-		Size: item.FileSize,
-		Md5: strings.ToUpper(item.FileMd5),
-		LastWrite: ts,
-		LocalPath: "",
-		FamilyId: familyId,
+		FileName:       fileName,
+		Size:           item.FileSize,
+		Md5:            strings.ToUpper(item.FileMd5),
+		LastWrite:      ts,
+		LocalPath:      "",
+		FamilyId:       familyId,
 	}
 	if familyId > 0 {
 		r, apierr = panClient.AppFamilyCreateUploadFile(appCreateUploadFileParam)
@@ -285,7 +285,7 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 func prepareMkdir(familyId int64, importFileItems []ImportExportFileItem) map[string]*dirFileListData {
 	panClient := config.Config.ActiveUser().PanClient()
 	resultMap := map[string]*dirFileListData{}
-	for _,item := range importFileItems {
+	for _, item := range importFileItems {
 		var apierr *apierror.ApiError
 		var rs *cloudpan.AppMkdirResult
 		panDir := path.Dir(item.Path)

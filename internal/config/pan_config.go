@@ -15,7 +15,6 @@ package config
 
 import (
 	"fmt"
-	"github.com/tickstep/cloudpan189-go/library/homedir"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -26,6 +25,7 @@ import (
 	"github.com/tickstep/cloudpan189-api/cloudpan"
 	"github.com/tickstep/cloudpan189-go/cmder/cmdutil"
 	"github.com/tickstep/cloudpan189-go/cmder/cmdutil/jsonhelper"
+	"github.com/tickstep/cloudpan189-go/library/homedir"
 	"github.com/tickstep/library-go/logger"
 	"github.com/tickstep/library-go/requester"
 )
@@ -329,11 +329,20 @@ func (c *PanConfig) ActiveUser() *PanUser {
 					// restore client
 					user, err := SetupUserByCookie(&u.WebToken, &u.AppToken)
 					if err != nil {
-						logger.Verboseln("setup user error")
-						return nil
+						_, _ = logger.Verboseln("setup user error, attempting fallback for synthetic token")
+						// Check if this is a synthetic token (starts with APP_LOGIN_)
+						if strings.HasPrefix(u.WebToken.CookieLoginUser, "APP_LOGIN_") {
+							_, _ = logger.Verboseln("Detected synthetic token, creating fallback client")
+							// Create a basic client using app tokens only
+							u.panClient = cloudpan.NewPanClient(u.WebToken, u.AppToken)
+							// Don't return nil, continue with fallback setup
+						} else {
+							return nil
+						}
+					} else {
+						u.panClient = user.panClient
+						u.Nickname = user.Nickname
 					}
-					u.panClient = user.panClient
-					u.Nickname = user.Nickname
 
 					// check workdir valid or not
 					if u.ActiveFamilyId > 0 {

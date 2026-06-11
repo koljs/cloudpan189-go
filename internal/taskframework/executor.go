@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -59,7 +59,7 @@ func (te *TaskExecutor) SetParallel(parallel int) {
 	te.parallel = parallel
 }
 
-//Append 将任务加到任务队列末尾
+// Append 将任务加到任务队列末尾
 func (te *TaskExecutor) Append(unit TaskUnit, maxRetry int) *TaskInfo {
 	te.lazyInit()
 	taskInfo := &TaskInfo{
@@ -76,12 +76,12 @@ func (te *TaskExecutor) Append(unit TaskUnit, maxRetry int) *TaskInfo {
 	return taskInfo
 }
 
-//AppendNoRetry 将任务加到任务队列末尾, 不重试
+// AppendNoRetry 将任务加到任务队列末尾, 不重试
 func (te *TaskExecutor) AppendNoRetry(unit TaskUnit) {
 	te.Append(unit, 0)
 }
 
-//Count 返回任务数量
+// Count 返回任务数量
 func (te *TaskExecutor) Count() int {
 	if te.deque == nil {
 		return 0
@@ -89,7 +89,7 @@ func (te *TaskExecutor) Count() int {
 	return te.deque.Size()
 }
 
-//Execute 执行任务
+// Execute 执行任务
 func (te *TaskExecutor) Execute() {
 	te.lazyInit()
 
@@ -147,7 +147,7 @@ func (te *TaskExecutor) Execute() {
 
 					time.Sleep(task.Unit.RetryWait()) // 等待
 					te.locker.Lock()
-					te.deque.Append(task)             // 重新加入队列末尾
+					te.deque.Append(task) // 重新加入队列末尾
 					te.locker.Unlock()
 					return
 				}
@@ -171,21 +171,21 @@ func (te *TaskExecutor) Execute() {
 	}
 }
 
-//FailedDeque 获取失败队列
+// FailedDeque 获取失败队列
 func (te *TaskExecutor) FailedDeque() *lane.Deque {
 	return te.failedDeque
 }
 
-//Stop 停止执行
+// Stop 停止执行
 func (te *TaskExecutor) Stop() {
 
 }
 
-//Pause 暂停执行
+// Pause 暂停执行
 func (te *TaskExecutor) Pause() {
 
 }
 
-//Resume 恢复执行
+// Resume 恢复执行
 func (te *TaskExecutor) Resume() {
 }

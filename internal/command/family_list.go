@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -52,10 +52,10 @@ func CmdFamily() cli.Command {
 	}
 }
 
-func RunSwitchFamilyList(targetFamilyId int64)  {
+func RunSwitchFamilyList(targetFamilyId int64) {
 	currentFamilyId := config.Config.ActiveUser().ActiveFamilyId
 	var activeFamilyInfo *cloudpan.AppFamilyInfo = nil
-	familyList,renderStr := getFamilyOptionList()
+	familyList, renderStr := getFamilyOptionList()
 
 	if familyList == nil || len(familyList) == 0 {
 		fmt.Println("切换云工作模式失败")
@@ -82,7 +82,7 @@ func RunSwitchFamilyList(targetFamilyId int64)  {
 		}
 	} else {
 		// 直接切换
-		for _,familyInfo := range familyList {
+		for _, familyInfo := range familyList {
 			if familyInfo.FamilyId == targetFamilyId {
 				activeFamilyInfo = familyInfo
 				break
@@ -113,14 +113,14 @@ func RunSwitchFamilyList(targetFamilyId int64)  {
 func getFamilyOptionList() ([]*cloudpan.AppFamilyInfo, string) {
 	activeUser := config.Config.ActiveUser()
 
-	familyResult,err := activeUser.PanClient().AppFamilyGetFamilyList()
+	familyResult, err := activeUser.PanClient().AppFamilyGetFamilyList()
 	if err != nil {
 		fmt.Println("获取家庭列表失败")
 		return nil, ""
 	}
 	t := []*cloudpan.AppFamilyInfo{}
 	personCloud := &cloudpan.AppFamilyInfo{
-		FamilyId: 0,
+		FamilyId:   0,
 		RemarkName: "个人云",
 		CreateTime: "-",
 	}

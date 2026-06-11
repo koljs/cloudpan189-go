@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -15,11 +15,11 @@ package uploader
 
 import (
 	"context"
+	"github.com/tickstep/cloudpan189-go/internal/utils"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/requester"
 	"github.com/tickstep/library-go/requester/rio"
 	"github.com/tickstep/library-go/requester/rio/speeds"
-	"github.com/tickstep/cloudpan189-go/internal/utils"
 	"sync"
 	"time"
 )
@@ -77,13 +77,13 @@ type (
 // NewMultiUploader 初始化上传
 func NewMultiUploader(uploadUrl, commitUrl, uploadFileId, xRequestId string, multiUpload MultiUpload, file rio.ReaderAtLen64, config *MultiUploaderConfig) *MultiUploader {
 	return &MultiUploader{
-		multiUpload: multiUpload,
-		file:        file,
-		config:      config,
-		uploadFileId: uploadFileId,
+		multiUpload:   multiUpload,
+		file:          file,
+		config:        config,
+		uploadFileId:  uploadFileId,
 		fileUploadUrl: uploadUrl,
 		fileCommitUrl: commitUrl,
-		xRequestId: xRequestId,
+		xRequestId:    xRequestId,
 	}
 }
 
@@ -190,8 +190,8 @@ func (muer *MultiUploader) InstanceState() *InstanceState {
 	blockStates := make([]*BlockState, 0, len(muer.workers))
 	for _, wer := range muer.workers {
 		blockStates = append(blockStates, &BlockState{
-			ID:       wer.id,
-			Range:    wer.splitUnit.Range(),
+			ID:         wer.id,
+			Range:      wer.splitUnit.Range(),
 			UploadDone: wer.uploadDone,
 		})
 	}
@@ -205,32 +205,32 @@ func (muer *MultiUploader) Cancel() {
 	close(muer.canceled)
 }
 
-//OnExecute 设置开始上传事件
+// OnExecute 设置开始上传事件
 func (muer *MultiUploader) OnExecute(onExecuteEvent requester.Event) {
 	muer.onExecuteEvent = onExecuteEvent
 }
 
-//OnSuccess 设置成功上传事件
+// OnSuccess 设置成功上传事件
 func (muer *MultiUploader) OnSuccess(onSuccessEvent requester.Event) {
 	muer.onSuccessEvent = onSuccessEvent
 }
 
-//OnFinish 设置结束上传事件
+// OnFinish 设置结束上传事件
 func (muer *MultiUploader) OnFinish(onFinishEvent requester.Event) {
 	muer.onFinishEvent = onFinishEvent
 }
 
-//OnCancel 设置取消上传事件
+// OnCancel 设置取消上传事件
 func (muer *MultiUploader) OnCancel(onCancelEvent requester.Event) {
 	muer.onCancelEvent = onCancelEvent
 }
 
-//OnError 设置上传发生错误事件
+// OnError 设置上传发生错误事件
 func (muer *MultiUploader) OnError(onErrorEvent requester.EventOnError) {
 	muer.onErrorEvent = onErrorEvent
 }
 
-//OnUploadStatusEvent 设置上传状态事件
+// OnUploadStatusEvent 设置上传状态事件
 func (muer *MultiUploader) OnUploadStatusEvent(f UploadStatusFunc) {
 	muer.onUploadStatusEvent = f
 }

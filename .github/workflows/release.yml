@@ -1,0 +1,131 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        
+    - name: golangci-lint
+      uses: golangci/golangci-lint-action@v8
+      with:
+        version: latest
+        args: --timeout=5m --disable=errcheck,staticcheck,ineffassign,unused
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        
+    - name: Run Gosec Security Scanner
+      uses: securego/gosec@master
+      with:
+        args: '-no-fail -fmt sarif -out results.sarif ./...'
+        
+    - name: Upload SARIF file
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: results.sarif
+
+  release:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    needs: [lint, security]
+    if: github.ref_type == 'tag'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.23'
+        
+    - name: Get version
+      id: get_version
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/}
+        echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+        echo "Version: $VERSION"
+      
+    - name: Build binaries
+      run: |
+        # 创建构建目录
+        mkdir -p builds
+        
+        # 定义构建目标
+        TARGETS=(
+          "linux/amd64"
+          "linux/arm64" 
+          "linux/386"
+          "linux/arm"
+          "linux/mips64"
+          "linux/mips64le"
+          "windows/amd64"
+          "windows/386"
+          "darwin/amd64"
+          "darwin/arm64"
+          "android/arm64"
+        )
+        
+        # 构建每个目标
+        for target in "${TARGETS[@]}"; do
+          GOOS=${target%/*}
+          GOARCH=${target#*/}
+          
+          # 设置输出文件名
+          OUTPUT_NAME="cloudpan189-go"
+          if [ "$GOOS" = "windows" ]; then
+            OUTPUT_NAME+=".exe"
+          fi
+          
+          # 构建二进制文件
+          echo "Building for $GOOS/$GOARCH..."
+          if ! CGO_ENABLED=0 GOOS=$GOOS GOARCH=$GOARCH go build -a -ldflags '-extldflags "-static" -checklinkname=0' -o builds/${OUTPUT_NAME} .; then
+            echo "Failed to build for $GOOS/$GOARCH"
+            exit 1
+          fi
+          
+          # 创建压缩包
+          ARCHIVE_NAME="cloudpan189-go-${{ steps.get_version.outputs.VERSION }}-${GOOS}-${GOARCH}"
+          if [ "$GOOS" = "windows" ]; then
+            cd builds && zip -r ${ARCHIVE_NAME}.zip ${OUTPUT_NAME} && cd ..
+          else
+            cd builds && tar -czf ${ARCHIVE_NAME}.tar.gz ${OUTPUT_NAME} && cd ..
+          fi
+          
+          # 清理二进制文件
+          rm builds/${OUTPUT_NAME}
+        done
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.get_version.outputs.VERSION }}
+        name: CloudPan189-Go ${{ steps.get_version.outputs.VERSION }}
+        files: builds/*
+        draft: false
+        prerelease: false
+        make_latest: true

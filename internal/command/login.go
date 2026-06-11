@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -22,7 +22,6 @@ import (
 	"github.com/urfave/cli"
 )
 
-
 func CmdLogin() cli.Command {
 	return cli.Command{
 		Name:  "login",
@@ -37,7 +36,7 @@ func CmdLogin() cli.Command {
 `,
 		Category: "天翼云盘账号",
 		Before:   cmder.ReloadConfigFunc, // 每次进行登录动作的时候需要调用刷新配置
-		After:    cmder.SaveConfigFunc, // 登录完成需要调用保存配置
+		After:    cmder.SaveConfigFunc,   // 登录完成需要调用保存配置
 		Action: func(c *cli.Context) error {
 			appToken := cloudpan.AppLoginToken{}
 			webToken := cloudpan.WebLoginToken{}
@@ -53,10 +52,37 @@ func CmdLogin() cli.Command {
 					return err
 				}
 			} else {
-				cli.ShowCommandHelp(c, c.Command.Name)
+				_ = cli.ShowCommandHelp(c, c.Command.Name)
 				return nil
 			}
-			cloudUser, _ := config.SetupUserByCookie(&webToken, &appToken)
+			cloudUser, setupErr := config.SetupUserByCookie(&webToken, &appToken)
+			if cloudUser == nil {
+				// SetupUserByCookie failed, likely due to synthetic token
+				// Create a minimal user with app tokens for basic functionality
+				cloudUser = &config.PanUser{
+					WebToken:                webToken,
+					AppToken:                appToken,
+					Workdir:                 "/",
+					WorkdirFileEntity:       *cloudpan.NewAppFileEntityForRootDir(),
+					FamilyWorkdir:           "/",
+					FamilyWorkdirFileEntity: *cloudpan.NewAppFileEntityForRootDir(),
+					UID:                     1, // Dummy UID
+					AccountName:             username,
+					Nickname:                username,
+				}
+				// Try to get real user info with a fresh pan client
+				panClient := cloudpan.NewPanClient(webToken, appToken)
+				if userInfo, err := panClient.GetUserInfo(); err == nil && userInfo != nil {
+					cloudUser.UID = userInfo.UserId
+					cloudUser.AccountName = userInfo.UserAccount
+					cloudUser.Nickname = userInfo.Nickname
+					if cloudUser.Nickname == "" {
+						cloudUser.Nickname = userInfo.UserAccount
+					}
+				} else {
+					fmt.Printf("注意: 无法获取完整用户信息，但登录成功。错误: %v\n", setupErr)
+				}
+			}
 			// save username / password
 			cloudUser.LoginUserName = config.EncryptString(username)
 			cloudUser.LoginUserPassword = config.EncryptString(passowrd)

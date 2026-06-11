@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -67,9 +67,9 @@ func RunMkdir(familyId int64, name string) {
 		cFileId = activeUser.FamilyWorkdirFileEntity.FileId
 	}
 	if path.Dir(fullpath) == cWorkDir {
-		rs, err = activeUser.PanClient().AppMkdirRecursive(familyId, cFileId, path.Clean(path.Dir(fullpath)), len(pathSlice) - 1, pathSlice)
+		rs, err = activeUser.PanClient().AppMkdirRecursive(familyId, cFileId, path.Clean(path.Dir(fullpath)), len(pathSlice)-1, pathSlice)
 	} else {
-		rs, err = activeUser.PanClient().AppMkdirRecursive(familyId,"", "", 0, pathSlice)
+		rs, err = activeUser.PanClient().AppMkdirRecursive(familyId, "", "", 0, pathSlice)
 	}
 
 	if err != nil {
