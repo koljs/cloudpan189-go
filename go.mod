@@ -15,6 +15,8 @@ require (
 	github.com/urfave/cli v1.21.1-0.20190817182405-23c83030263f
 )
 
+replace github.com/tickstep/cloudpan189-api => ./library/cloudpan189-api-fixed
+
 require (
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/cpuguy83/go-md2man v1.0.10 // indirect
