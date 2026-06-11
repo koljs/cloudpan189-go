@@ -15,8 +15,6 @@ package config
 
 import (
 	"encoding/hex"
-	"github.com/olekukonko/tablewriter"
-	"github.com/tickstep/cloudpan189-go/cmder/cmdtable"
 	"github.com/tickstep/library-go/converter"
 	"github.com/tickstep/library-go/crypto"
 	"github.com/tickstep/library-go/ids"
@@ -29,10 +27,8 @@ import (
 func (pl *PanUserList) String() string {
 	builder := &strings.Builder{}
 
-	tb := cmdtable.NewTable(builder)
-	tb.SetColumnAlignment([]int{tablewriter.ALIGN_DEFAULT, tablewriter.ALIGN_RIGHT, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER, tablewriter.ALIGN_CENTER})
-	tb.SetHeader([]string{"#", "uid", "用户名", "昵称", "性别"})
-
+	// 使用简单的格式化输出，确保每行独立显示
+	builder.WriteString("#\tuid\t\t用户名\t\t昵称\t\t性别\n")
 	for k, userInfo := range *pl {
 		sex := "未知"
 		if userInfo.Sex == "F" {
@@ -40,10 +36,8 @@ func (pl *PanUserList) String() string {
 		} else if userInfo.Sex == "M" {
 			sex = "男"
 		}
-		tb.Append([]string{strconv.Itoa(k), strconv.FormatUint(userInfo.UID, 10), userInfo.AccountName, userInfo.Nickname, sex})
+		builder.WriteString(strconv.Itoa(k) + "\t" + strconv.FormatUint(userInfo.UID, 10) + "\t\t" + userInfo.AccountName + "\t\t" + userInfo.Nickname + "\t\t" + sex + "\n")
 	}
-
-	tb.Render()
 
 	return builder.String()
 }
