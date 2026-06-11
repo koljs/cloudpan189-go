@@ -19,6 +19,7 @@ import (
 	"github.com/tickstep/library-go/crypto"
 	"github.com/tickstep/library-go/ids"
 	"github.com/tickstep/library-go/logger"
+	"hash/fnv"
 	"os"
 	"strconv"
 	"strings"
@@ -40,6 +41,13 @@ func (pl *PanUserList) String() string {
 	}
 
 	return builder.String()
+}
+
+// GenerateUIDFromUsername 根据用户名生成唯一 UID，避免多账号冲突
+func GenerateUIDFromUsername(username string) uint64 {
+	h := fnv.New64a()
+	h.Write([]byte(username))
+	return h.Sum64()
 }
 
 // AverageParallel 返回平均的下载最大并发量

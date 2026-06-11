@@ -59,6 +59,8 @@ func CmdLogin() cli.Command {
 			if cloudUser == nil {
 				// SetupUserByCookie failed, likely due to synthetic token
 				// Create a minimal user with app tokens for basic functionality
+				// Generate a unique UID from username hash to avoid conflicts
+				uniqueUID := config.GenerateUIDFromUsername(username)
 				cloudUser = &config.PanUser{
 					WebToken:                webToken,
 					AppToken:                appToken,
@@ -66,7 +68,7 @@ func CmdLogin() cli.Command {
 					WorkdirFileEntity:       *cloudpan.NewAppFileEntityForRootDir(),
 					FamilyWorkdir:           "/",
 					FamilyWorkdirFileEntity: *cloudpan.NewAppFileEntityForRootDir(),
-					UID:                     1, // Dummy UID
+					UID:                     uniqueUID,
 					AccountName:             username,
 					Nickname:                username,
 				}
