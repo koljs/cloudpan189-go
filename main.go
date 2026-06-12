@@ -435,6 +435,12 @@ func main() {
 		// 导入文件 import
 		command.CmdImport(),
 
+		// 加密秒传 encrapidupload
+		command.CmdEncRapidUpload(),
+
+		// 加密导出 encexport
+		command.CmdEncExport(),
+
 		// 回收站
 		//command.CmdRecycle(),
 
