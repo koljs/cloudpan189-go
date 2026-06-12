@@ -239,8 +239,35 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 		}
 	}
 
-	// === 第一步：尝试新版API（initMultiUpload）实现跨账号秒传 ===
+	// === 第一步：尝试AList风格的旧API秒传（opertype=3） ===
+	// AList的RapidUpload使用createUploadFile.action + opertype=3
+	// opertype=3可能让服务器在全局文件池中匹配，而非仅当前账号
 	fileMd5 := strings.ToUpper(item.FileMd5)
+	rapidResp, rapidErr := RapidUploadCreate(
+		activeUser.AppToken,
+		dataItem.Dir.FileId,
+		fileName,
+		fmt.Sprintf("%d", item.FileSize),
+		fileMd5,
+	)
+	if rapidErr == nil && rapidResp != nil {
+		if rapidResp.FileDataExists == 1 {
+			// 秒传成功，提交
+			_, commitErr := RapidUploadCommit(activeUser.AppToken, rapidResp.FileCommitUrl, rapidResp.UploadFileId, isOverwrite)
+			if commitErr != nil {
+				fmt.Println("秒传提交失败：", commitErr.Error())
+			} else {
+				fmt.Println("秒传成功")
+				return true, false
+			}
+		} else {
+			logger.Verboseln("旧API(opertype=3)未能秒传，FileDataExists=0")
+		}
+	} else {
+		logger.Verboseln("旧API(opertype=3)调用失败：", rapidErr)
+	}
+
+	// === 第二步：尝试新版API（initMultiUpload）实现跨账号秒传 ===
 	sliceSize := item.SliceSize
 	sliceMd5 := item.SliceMd5
 
@@ -254,12 +281,11 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 			sliceMd5 = fileMd5
 		} else {
 			// 多分片大文件，无法计算真实的sliceMd5
-			// 但尝试用fileMd5作为sliceMd5，服务器可能仅凭fileMd5匹配
+			// 尝试用fileMd5作为sliceMd5，服务器可能仅凭fileMd5匹配
 			sliceMd5 = fileMd5
 		}
 	}
 
-	// 尝试新API秒传
 	initResp, newApiErr := InitMultiUpload(
 		activeUser.AppToken,
 		dataItem.Dir.FileId,
@@ -278,16 +304,15 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 				fmt.Println("秒传提交失败：", commitErr.Error())
 				return false, false
 			}
-			fmt.Println("秒传成功（跨账号）")
+			fmt.Println("秒传成功（新API）")
 			return true, false
 		}
-		// 新API也未能秒传，继续尝试旧API
-		logger.Verboseln("新API未能秒传，FileDataExists=0，尝试旧API")
+		logger.Verboseln("新API未能秒传，FileDataExists=0，尝试原API")
 	} else {
 		logger.Verboseln("新API调用失败：", newApiErr)
 	}
 
-	// === 第二步：回退到旧版API（createUploadFile）尝试同账号秒传 ===
+	// === 第三步：回退到原版API（createUploadFile，opertype=1） ===
 	var r *cloudpan.AppCreateUploadFileResult
 	var apierr *apierror.ApiError
 	ts := time.Now().Format("2006-01-02 15:04:05")

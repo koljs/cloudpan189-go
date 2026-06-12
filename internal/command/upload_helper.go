@@ -2,6 +2,7 @@ package command
 
 import (
 	"encoding/json"
+	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -40,6 +41,27 @@ type (
 			CreateDate string `json:"createDate"`
 		} `json:"file"`
 	}
+
+	// RapidUploadCreateResp 旧版API秒传创建响应（JSON格式，参考AList）
+	RapidUploadCreateResp struct {
+		UploadFileId   int64  `json:"uploadFileId"`
+		FileUploadUrl  string `json:"fileUploadUrl"`
+		FileCommitUrl  string `json:"fileCommitUrl"`
+		FileDataExists int    `json:"fileDataExists"`
+	}
+
+	// RapidUploadCommitResp 旧版API秒传提交响应（JSON格式，参考AList）
+	RapidUploadCommitResp struct {
+		ID         string `json:"id"`
+		Name       string `json:"name"`
+		Size       int64  `json:"size"`
+		Md5        string `json:"md5"`
+		CreateDate string `json:"createDate"`
+		Rev        string `json:"rev"`
+		UserId     string `json:"userId"`
+		RequestId  string `json:"requestId"`
+		IsSafe     string `json:"isSafe"`
+	}
 )
 
 // computeSliceSize 根据文件大小计算分片大小
@@ -61,9 +83,180 @@ func computeSliceSize(fileSize int64) int64 {
 	}
 }
 
+// RapidUploadCreate 旧版API创建上传会话（参考AList实现）
+// 使用 opertype=3，与AList保持一致，可能影响服务器的文件匹配行为
+func RapidUploadCreate(appToken cloudpan.AppLoginToken, parentFolderId, fileName, fileSize, fileMd5 string) (*RapidUploadCreateResp, *apierror.ApiError) {
+	fullUrl := cloudpan.API_URL + "/createUploadFile.action?" + apiutil.PcClientInfoSuffixParam()
+
+	httpMethod := "POST"
+	dateOfGmt := apiutil.DateOfGmtStr()
+	requestId := apiutil.XRequestId()
+	sessionKey := appToken.SessionKey
+	sessionSecret := appToken.SessionSecret
+
+	headers := map[string]string{
+		"Content-Type": "application/x-www-form-urlencoded",
+		"Date":         dateOfGmt,
+		"SessionKey":   sessionKey,
+		"Signature":    apiutil.SignatureOfHmac(sessionSecret, sessionKey, httpMethod, fullUrl, dateOfGmt),
+		"X-Request-ID": requestId,
+	}
+
+	// 参考AList的OldUploadCreate，使用opertype=3
+	formData := url.Values{}
+	formData.Set("parentFolderId", parentFolderId)
+	formData.Set("fileName", fileName)
+	formData.Set("size", fileSize)
+	formData.Set("md5", fileMd5)
+	formData.Set("opertype", "3")
+	formData.Set("flag", "1")
+	formData.Set("resumePolicy", "1")
+	formData.Set("isLog", "0")
+
+	logger.Verboseln("RapidUploadCreate request url: " + fullUrl)
+	req, err := http.NewRequest(httpMethod, fullUrl, strings.NewReader(formData.Encode()))
+	if err != nil {
+		return nil, apierror.NewApiErrorWithError(err)
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Verboseln("RapidUploadCreate occurs error: ", err.Error())
+		return nil, apierror.NewApiErrorWithError(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logger.Verboseln("RapidUploadCreate read body error: ", err.Error())
+		return nil, apierror.NewApiErrorWithError(err)
+	}
+	logger.Verboseln("RapidUploadCreate response: " + string(body))
+
+	if resp.StatusCode != 200 {
+		return nil, apierror.NewFailedApiError(fmt.Sprintf("RapidUploadCreate failed: HTTP %d, %s", resp.StatusCode, string(body)))
+	}
+
+	// 先尝试JSON解析（AList使用JSON格式）
+	result := &RapidUploadCreateResp{}
+	if jsonErr := json.Unmarshal(body, result); jsonErr == nil && result.UploadFileId > 0 {
+		return result, nil
+	}
+
+	// 再尝试XML解析（旧版API可能返回XML）
+	type xmlResp struct {
+		XMLName        xml.Name `xml:"uploadFile"`
+		UploadFileId   int64    `xml:"uploadFileId"`
+		FileUploadUrl  string   `xml:"fileUploadUrl"`
+		FileCommitUrl  string   `xml:"fileCommitUrl"`
+		FileDataExists int      `xml:"fileDataExists"`
+	}
+	xmlResult := &xmlResp{}
+	if xmlErr := xml.Unmarshal(body, xmlResult); xmlErr == nil && xmlResult.UploadFileId > 0 {
+		result.UploadFileId = xmlResult.UploadFileId
+		result.FileUploadUrl = xmlResult.FileUploadUrl
+		result.FileCommitUrl = xmlResult.FileCommitUrl
+		result.FileDataExists = xmlResult.FileDataExists
+		return result, nil
+	}
+
+	return nil, apierror.NewFailedApiError(fmt.Sprintf("RapidUploadCreate parse response failed: %s", string(body)))
+}
+
+// RapidUploadCommit 旧版API提交秒传（参考AList实现）
+func RapidUploadCommit(appToken cloudpan.AppLoginToken, fileCommitUrl string, uploadFileId int64, overwrite bool) (*RapidUploadCommitResp, *apierror.ApiError) {
+	fullUrl := fileCommitUrl + "?" + apiutil.PcClientInfoSuffixParam()
+
+	httpMethod := "POST"
+	dateOfGmt := apiutil.DateOfGmtStr()
+	requestId := apiutil.XRequestId()
+	sessionKey := appToken.SessionKey
+	sessionSecret := appToken.SessionSecret
+
+	opertype := "1"
+	if overwrite {
+		opertype = "3"
+	}
+
+	headers := map[string]string{
+		"Content-Type": "application/x-www-form-urlencoded",
+		"Date":         dateOfGmt,
+		"SessionKey":   sessionKey,
+		"Signature":    apiutil.SignatureOfHmac(sessionSecret, sessionKey, httpMethod, fullUrl, dateOfGmt),
+		"X-Request-ID": requestId,
+	}
+
+	formData := url.Values{}
+	formData.Set("uploadFileId", fmt.Sprintf("%d", uploadFileId))
+	formData.Set("opertype", opertype)
+	formData.Set("resumePolicy", "1")
+	formData.Set("isLog", "0")
+
+	logger.Verboseln("RapidUploadCommit request url: " + fullUrl)
+	req, err := http.NewRequest(httpMethod, fullUrl, strings.NewReader(formData.Encode()))
+	if err != nil {
+		return nil, apierror.NewApiErrorWithError(err)
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		logger.Verboseln("RapidUploadCommit occurs error: ", err.Error())
+		return nil, apierror.NewApiErrorWithError(err)
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		logger.Verboseln("RapidUploadCommit read body error: ", err.Error())
+		return nil, apierror.NewApiErrorWithError(err)
+	}
+	logger.Verboseln("RapidUploadCommit response: " + string(body))
+
+	if resp.StatusCode != 200 {
+		return nil, apierror.NewFailedApiError(fmt.Sprintf("RapidUploadCommit failed: HTTP %d, %s", resp.StatusCode, string(body)))
+	}
+
+	// 先尝试JSON解析
+	result := &RapidUploadCommitResp{}
+	if jsonErr := json.Unmarshal(body, result); jsonErr == nil && result.ID != "" {
+		return result, nil
+	}
+
+	// 再尝试XML解析
+	type xmlResp struct {
+		XMLName    xml.Name `xml:"file"`
+		ID         string   `xml:"id"`
+		Name       string   `xml:"name"`
+		Size       string   `xml:"size"`
+		Md5        string   `xml:"md5"`
+		CreateDate string   `xml:"createDate"`
+		Rev        string   `xml:"rev"`
+		UserId     string   `xml:"userId"`
+		RequestId  string   `xml:"requestId"`
+		IsSafe     string   `xml:"isSafe"`
+	}
+	xmlResult := &xmlResp{}
+	if xmlErr := xml.Unmarshal(body, xmlResult); xmlErr == nil && xmlResult.ID != "" {
+		result.ID = xmlResult.ID
+		result.Name = xmlResult.Name
+		result.Md5 = xmlResult.Md5
+		result.CreateDate = xmlResult.CreateDate
+		return result, nil
+	}
+
+	return nil, apierror.NewFailedApiError(fmt.Sprintf("RapidUploadCommit parse response failed: %s", string(body)))
+}
+
 // InitMultiUpload 新版分片上传初始化（支持跨账号秒传）
 // 使用 upload.cloud.189.cn/person/initMultiUpload 接口
-// 该接口会在全局文件池中匹配，而非仅当前账号
 func InitMultiUpload(appToken cloudpan.AppLoginToken, parentFolderId, fileName, fileSize, fileMd5, sliceSize, sliceMd5 string, familyId int64) (*InitMultiUploadResp, *apierror.ApiError) {
 	fullUrl := UPLOAD_URL + "/person/initMultiUpload"
 	if familyId > 0 {
@@ -125,7 +318,6 @@ func InitMultiUpload(appToken cloudpan.AppLoginToken, parentFolderId, fileName, 
 	}
 	logger.Verboseln("InitMultiUpload response: " + string(body))
 
-	// 检查错误
 	if resp.StatusCode != 200 {
 		return nil, apierror.NewFailedApiError(fmt.Sprintf("InitMultiUpload failed: HTTP %d, %s", resp.StatusCode, string(body)))
 	}
@@ -214,19 +406,4 @@ func CommitMultiUploadFile(appToken cloudpan.AppLoginToken, uploadFileId string,
 	}
 
 	return result, nil
-}
-
-// computeSliceMd5ForSingleSlice 当文件只有一个分片时，sliceMd5 = fileMd5
-// 当文件有多个分片时，需要所有分片的md5拼接后再取md5
-// 对于import场景，我们只有文件的整体md5，无法计算多分片的sliceMd5
-// 但对于单分片文件（文件大小 <= sliceSize），sliceMd5 = fileMd5
-func computeSliceMd5FromImport(fileMd5 string, fileSize int64) string {
-	sliceSize := computeSliceSize(fileSize)
-	if fileSize <= sliceSize {
-		// 单分片文件，sliceMd5 = fileMd5
-		return strings.ToUpper(fileMd5)
-	}
-	// 多分片文件，无法仅从fileMd5计算sliceMd5
-	// 返回空字符串，由调用方决定如何处理
-	return ""
 }
