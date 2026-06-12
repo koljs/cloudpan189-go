@@ -26,6 +26,7 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -35,6 +36,8 @@ type (
 		FileSize   int64  `json:"size"`
 		Path       string `json:"path"`
 		LastOpTime string `json:"lastOpTime"`
+		SliceMd5   string `json:"sliceMd5,omitempty"`
+		SliceSize  int64  `json:"sliceSize,omitempty"`
 	}
 )
 
@@ -135,11 +138,19 @@ func RunExportFiles(familyId int64, overwrite bool, panPaths []string, saveLocal
 
 			// 只需要存储文件即可
 			if !fd.IsFolder {
+				sliceSize := computeSliceSize(fd.FileSize)
+				sliceMd5 := ""
+				if fd.FileSize > 0 && fd.FileSize <= sliceSize {
+					// 单分片文件，sliceMd5 = fileMd5
+					sliceMd5 = strings.ToUpper(fd.FileMd5)
+				}
 				item := ImportExportFileItem{
 					FileMd5:    fd.FileMd5,
 					FileSize:   fd.FileSize,
 					Path:       fd.Path,
 					LastOpTime: fd.LastOpTime,
+					SliceMd5:   sliceMd5,
+					SliceSize:  sliceSize,
 				}
 				jstr, e := json.Marshal(&item)
 				if e != nil {
