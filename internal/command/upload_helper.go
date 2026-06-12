@@ -23,11 +23,11 @@ import (
 )
 
 const (
-	API_URL    = "https://api.cloud.189.cn"
-	UPLOAD_URL = "https://upload.cloud.189.cn"
-	PC_CLIENT  = "TELEPC"
-	VERSION    = "6.2"
-	CHANNEL_ID = "web_cloud.189.cn"
+	PC_API_URL    = "https://api.cloud.189.cn"
+	PC_UPLOAD_URL = "https://upload.cloud.189.cn"
+	PC_CLIENT     = "TELEPC"
+	PC_VERSION    = "6.2"
+	PC_CHANNEL_ID = "web_cloud.189.cn"
 )
 
 type (
@@ -62,12 +62,9 @@ type (
 )
 
 // computeSliceSize 根据文件大小计算分片大小（参考AList的partSize函数）
-// 10MB * 2 * 999片 = ~20GB 上限用 20MB
-// 10MB * 999片 = ~10GB 上限用 10MB
 func computeSliceSize(fileSize int64) int64 {
 	const DEFAULT = 1024 * 1024 * 10 // 10MB
 	if fileSize > DEFAULT*2*999 {
-		// 计算需要的倍率，确保分片数不超过1999
 		rate := fileSize / (DEFAULT * 1999)
 		if rate < 5 {
 			rate = 5
@@ -80,16 +77,14 @@ func computeSliceSize(fileSize int64) int64 {
 	return DEFAULT // 10MB
 }
 
-// ======== AES-ECB 加密（参考AList实现） ========
+// ======== AES-ECB 加密（参考AList实现，用于新版API的params加密） ========
 
-// pkcs7Padding PKCS7填充
 func pkcs7Padding(ciphertext []byte, blockSize int) []byte {
 	padding := blockSize - len(ciphertext)%blockSize
 	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(ciphertext, padtext...)
 }
 
-// aesECBEncrypt AES-ECB加密，返回大写十六进制字符串
 func aesECBEncrypt(data, key string) string {
 	block, err := aes.NewCipher([]byte(key))
 	if err != nil {
@@ -104,8 +99,6 @@ func aesECBEncrypt(data, key string) string {
 	}
 	return strings.ToUpper(hex.EncodeToString(encrypted))
 }
-
-// ======== 参数编码（参考AList的Params.Encode） ========
 
 // encodeParams 将参数map按key排序后编码为 key=value&key=value 格式
 func encodeParams(params map[string]string) string {
@@ -131,10 +124,8 @@ func encodeParams(params map[string]string) string {
 
 // ======== 签名（参考AList的signatureOfHmac） ========
 
-// signatureOfHmac 计算HMAC-SHA1签名
-// 签名数据格式：SessionKey={}&Operate={}&RequestURI={}&Date={}&params={encryptedParams}
-func signatureOfHmac(sessionSecret, sessionKey, httpMethod, fullUrl, dateOfGmt, encryptedParams string) string {
-	// 提取URL路径
+// pcSignatureOfHmac 计算HMAC-SHA1签名（AList风格）
+func pcSignatureOfHmac(sessionSecret, sessionKey, httpMethod, fullUrl, dateOfGmt, encryptedParams string) string {
 	re := regexp.MustCompile(`://[^/]+((/[^/\s?#]+)*)`)
 	matches := re.FindStringSubmatch(fullUrl)
 	urlPath := ""
@@ -151,98 +142,69 @@ func signatureOfHmac(sessionSecret, sessionKey, httpMethod, fullUrl, dateOfGmt, 
 	return strings.ToUpper(hex.EncodeToString(mac.Sum(nil)))
 }
 
-// ======== 客户端后缀参数（参考AList的clientSuffix） ========
-
-func clientSuffix() map[string]string {
+// pcClientSuffix 返回客户端后缀参数（参考AList的clientSuffix）
+func pcClientSuffix() map[string]string {
 	return map[string]string{
 		"clientType": PC_CLIENT,
-		"version":    VERSION,
-		"channelId":  CHANNEL_ID,
+		"version":    PC_VERSION,
+		"channelId":  PC_CHANNEL_ID,
 		"rand":       fmt.Sprintf("%d_%d", rand.Int63n(100000), rand.Int63n(10000000000)),
 	}
 }
 
-// ======== 构建加密请求 ========
+// ======== 旧版API秒传（参考AList的OldUploadCreate + OldUploadCommit） ========
+// AList的post方法传params=nil，所以EncryptParams返回空字符串
+// FormData通过callback的SetFormData直接发送
+// 签名不包含params（因为params为空）
 
-// buildEncryptedRequest 构建带AES加密参数的请求
-// 参考AList的request函数实现
-func buildEncryptedRequest(method, fullUrl string, params map[string]string, appToken cloudpan.AppLoginToken, isFamily bool) (*http.Request, error) {
+// RapidUploadCreate 旧版API创建上传会话（参考AList的OldUploadCreate）
+// 关键：FormData作为POST body发送，params不加密，签名不含params
+func RapidUploadCreate(appToken cloudpan.AppLoginToken, parentFolderId, fileName, fileSize, fileMd5 string) (*CreateUploadFileResp, *apierror.ApiError) {
+	fullUrl := PC_API_URL + "/createUploadFile.action"
+
 	sessionKey := appToken.SessionKey
 	sessionSecret := appToken.SessionSecret
-	if isFamily {
-		sessionKey = appToken.FamilySessionKey
-		sessionSecret = appToken.FamilySessionSecret
-	}
 
-	// 1. 加密参数
-	encryptedParams := ""
-	if params != nil {
-		plainParams := encodeParams(params)
-		encryptedParams = aesECBEncrypt(plainParams, sessionSecret[:16])
-	}
-
-	// 2. 构建URL（添加clientSuffix和加密后的params）
+	// 1. 构建URL（添加clientSuffix，不添加params因为post方法params=nil）
 	reqUrl, _ := url.Parse(fullUrl)
 	query := reqUrl.Query()
-	for k, v := range clientSuffix() {
+	for k, v := range pcClientSuffix() {
 		query.Set(k, v)
-	}
-	if encryptedParams != "" {
-		query.Set("params", encryptedParams)
 	}
 	reqUrl.RawQuery = query.Encode()
 	finalUrl := reqUrl.String()
 
-	// 3. 计算签名
+	// 2. 准备FormData
+	formData := url.Values{}
+	formData.Set("parentFolderId", parentFolderId)
+	formData.Set("fileName", fileName)
+	formData.Set("size", fileSize)
+	formData.Set("md5", fileMd5)
+	formData.Set("opertype", "3")
+	formData.Set("flag", "1")
+	formData.Set("resumePolicy", "1")
+	formData.Set("isLog", "0")
+
+	// 3. 计算签名（不含params，因为post方法params=nil）
 	dateOfGmt := time.Now().UTC().Format(http.TimeFormat)
-	signature := signatureOfHmac(sessionSecret, sessionKey, method, fullUrl, dateOfGmt, encryptedParams)
+	signature := pcSignatureOfHmac(sessionSecret, sessionKey, "POST", fullUrl, dateOfGmt, "")
 
 	// 4. 构建请求
-	var req *http.Request
-	var err error
-	if method == "POST" {
-		req, err = http.NewRequest(method, finalUrl, nil)
-	} else {
-		req, err = http.NewRequest(method, finalUrl, nil)
-	}
+	req, err := http.NewRequest("POST", finalUrl, strings.NewReader(formData.Encode()))
 	if err != nil {
-		return nil, err
+		return nil, apierror.NewApiErrorWithError(err)
 	}
 
 	// 5. 设置请求头
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Date", dateOfGmt)
 	req.Header.Set("SessionKey", sessionKey)
 	req.Header.Set("Signature", signature)
 	req.Header.Set("X-Request-ID", fmt.Sprintf("%d", time.Now().UnixNano()))
 	req.Header.Set("Accept", "application/json;charset=UTF-8")
 
-	logger.Verboseln("Encrypted request URL: ", finalUrl)
-	logger.Verboseln("Encrypted params: ", encryptedParams)
-
-	return req, nil
-}
-
-// ======== 旧版API秒传（参考AList的OldUploadCreate + OldUploadCommit） ========
-
-// RapidUploadCreate 旧版API创建上传会话（使用AES加密参数，参考AList实现）
-func RapidUploadCreate(appToken cloudpan.AppLoginToken, parentFolderId, fileName, fileSize, fileMd5 string) (*CreateUploadFileResp, *apierror.ApiError) {
-	fullUrl := API_URL + "/createUploadFile.action"
-
-	params := map[string]string{
-		"parentFolderId": parentFolderId,
-		"fileName":       fileName,
-		"size":           fileSize,
-		"md5":            fileMd5,
-		"opertype":       "3",
-		"flag":           "1",
-		"resumePolicy":   "1",
-		"isLog":          "0",
-	}
-
-	req, err := buildEncryptedRequest("POST", fullUrl, params, appToken, false)
-	if err != nil {
-		return nil, apierror.NewApiErrorWithError(err)
-	}
+	logger.Verboseln("RapidUploadCreate request URL: ", finalUrl)
+	logger.Verboseln("RapidUploadCreate form data: ", formData.Encode())
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -272,24 +234,51 @@ func RapidUploadCreate(appToken cloudpan.AppLoginToken, parentFolderId, fileName
 	return result, nil
 }
 
-// RapidUploadCommit 旧版API提交秒传（使用AES加密参数，参考AList实现）
+// RapidUploadCommit 旧版API提交秒传（参考AList的OldUploadCommit）
 func RapidUploadCommit(appToken cloudpan.AppLoginToken, fileCommitUrl string, uploadFileId int64, overwrite bool) (*CreateUploadFileResp, *apierror.ApiError) {
+	sessionKey := appToken.SessionKey
+	sessionSecret := appToken.SessionSecret
+
 	opertype := "1"
 	if overwrite {
 		opertype = "3"
 	}
 
-	params := map[string]string{
-		"opertype":     opertype,
-		"resumePolicy": "1",
-		"uploadFileId": fmt.Sprintf("%d", uploadFileId),
-		"isLog":        "0",
+	// 1. 构建URL（添加clientSuffix）
+	reqUrl, _ := url.Parse(fileCommitUrl)
+	query := reqUrl.Query()
+	for k, v := range pcClientSuffix() {
+		query.Set(k, v)
 	}
+	reqUrl.RawQuery = query.Encode()
+	finalUrl := reqUrl.String()
 
-	req, err := buildEncryptedRequest("POST", fileCommitUrl, params, appToken, false)
+	// 2. 准备FormData
+	formData := url.Values{}
+	formData.Set("opertype", opertype)
+	formData.Set("resumePolicy", "1")
+	formData.Set("uploadFileId", fmt.Sprintf("%d", uploadFileId))
+	formData.Set("isLog", "0")
+
+	// 3. 计算签名（不含params）
+	dateOfGmt := time.Now().UTC().Format(http.TimeFormat)
+	signature := pcSignatureOfHmac(sessionSecret, sessionKey, "POST", fileCommitUrl, dateOfGmt, "")
+
+	// 4. 构建请求
+	req, err := http.NewRequest("POST", finalUrl, strings.NewReader(formData.Encode()))
 	if err != nil {
 		return nil, apierror.NewApiErrorWithError(err)
 	}
+
+	// 5. 设置请求头
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Date", dateOfGmt)
+	req.Header.Set("SessionKey", sessionKey)
+	req.Header.Set("Signature", signature)
+	req.Header.Set("X-Request-ID", fmt.Sprintf("%d", time.Now().UnixNano()))
+	req.Header.Set("Accept", "application/json;charset=UTF-8")
+
+	logger.Verboseln("RapidUploadCommit request URL: ", finalUrl)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -319,16 +308,24 @@ func RapidUploadCommit(appToken cloudpan.AppLoginToken, fileCommitUrl string, up
 	return result, nil
 }
 
-// ======== 新版API秒传（参考AList的FastUpload） ========
+// ======== 新版API秒传（参考AList的FastUpload，使用加密params） ========
 
-// InitMultiUpload 新版分片上传初始化（使用AES加密参数，参考AList实现）
+// InitMultiUpload 新版分片上传初始化（使用AES加密params，参考AList实现）
 func InitMultiUpload(appToken cloudpan.AppLoginToken, parentFolderId, fileName, fileSize, fileMd5, sliceSize, sliceMd5 string, familyId int64) (*InitMultiUploadResp, *apierror.ApiError) {
-	fullUrl := UPLOAD_URL + "/person/initMultiUpload"
+	fullUrl := PC_UPLOAD_URL + "/person/initMultiUpload"
 	isFamily := familyId > 0
 	if isFamily {
-		fullUrl = UPLOAD_URL + "/family/initMultiUpload"
+		fullUrl = PC_UPLOAD_URL + "/family/initMultiUpload"
 	}
 
+	sessionKey := appToken.SessionKey
+	sessionSecret := appToken.SessionSecret
+	if isFamily {
+		sessionKey = appToken.FamilySessionKey
+		sessionSecret = appToken.FamilySessionSecret
+	}
+
+	// 1. 加密params（AList的request函数对GET请求加密params）
 	params := map[string]string{
 		"parentFolderId": parentFolderId,
 		"fileName":       url.QueryEscape(fileName),
@@ -340,11 +337,39 @@ func InitMultiUpload(appToken cloudpan.AppLoginToken, parentFolderId, fileName, 
 	if isFamily {
 		params["familyId"] = fmt.Sprintf("%d", familyId)
 	}
+	plainParams := encodeParams(params)
+	encryptedParams := aesECBEncrypt(plainParams, sessionSecret[:16])
 
-	req, err := buildEncryptedRequest("GET", fullUrl, params, appToken, isFamily)
+	// 2. 构建URL（添加clientSuffix + 加密后的params）
+	reqUrl, _ := url.Parse(fullUrl)
+	query := reqUrl.Query()
+	for k, v := range pcClientSuffix() {
+		query.Set(k, v)
+	}
+	if encryptedParams != "" {
+		query.Set("params", encryptedParams)
+	}
+	reqUrl.RawQuery = query.Encode()
+	finalUrl := reqUrl.String()
+
+	// 3. 计算签名（包含加密后的params）
+	dateOfGmt := time.Now().UTC().Format(http.TimeFormat)
+	signature := pcSignatureOfHmac(sessionSecret, sessionKey, "GET", fullUrl, dateOfGmt, encryptedParams)
+
+	// 4. 构建请求
+	req, err := http.NewRequest("GET", finalUrl, nil)
 	if err != nil {
 		return nil, apierror.NewApiErrorWithError(err)
 	}
+
+	// 5. 设置请求头
+	req.Header.Set("Date", dateOfGmt)
+	req.Header.Set("SessionKey", sessionKey)
+	req.Header.Set("Signature", signature)
+	req.Header.Set("X-Request-ID", fmt.Sprintf("%d", time.Now().UnixNano()))
+	req.Header.Set("Accept", "application/json;charset=UTF-8")
+
+	logger.Verboseln("InitMultiUpload request URL: ", finalUrl)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -374,12 +399,19 @@ func InitMultiUpload(appToken cloudpan.AppLoginToken, parentFolderId, fileName, 
 	return result, nil
 }
 
-// CommitMultiUploadFile 新版分片上传提交（使用AES加密参数）
+// CommitMultiUploadFile 新版分片上传提交（使用AES加密params）
 func CommitMultiUploadFile(appToken cloudpan.AppLoginToken, uploadFileId string, familyId int64, overwrite bool) (*CommitMultiUploadFileResp, *apierror.ApiError) {
-	fullUrl := UPLOAD_URL + "/person/commitMultiUploadFile"
+	fullUrl := PC_UPLOAD_URL + "/person/commitMultiUploadFile"
 	isFamily := familyId > 0
 	if isFamily {
-		fullUrl = UPLOAD_URL + "/family/commitMultiUploadFile"
+		fullUrl = PC_UPLOAD_URL + "/family/commitMultiUploadFile"
+	}
+
+	sessionKey := appToken.SessionKey
+	sessionSecret := appToken.SessionSecret
+	if isFamily {
+		sessionKey = appToken.FamilySessionKey
+		sessionSecret = appToken.FamilySessionSecret
 	}
 
 	opertype := "1"
@@ -387,6 +419,7 @@ func CommitMultiUploadFile(appToken cloudpan.AppLoginToken, uploadFileId string,
 		opertype = "3"
 	}
 
+	// 1. 加密params
 	params := map[string]string{
 		"uploadFileId": uploadFileId,
 		"isLog":        "0",
@@ -395,11 +428,39 @@ func CommitMultiUploadFile(appToken cloudpan.AppLoginToken, uploadFileId string,
 	if isFamily {
 		params["familyId"] = fmt.Sprintf("%d", familyId)
 	}
+	plainParams := encodeParams(params)
+	encryptedParams := aesECBEncrypt(plainParams, sessionSecret[:16])
 
-	req, err := buildEncryptedRequest("GET", fullUrl, params, appToken, isFamily)
+	// 2. 构建URL
+	reqUrl, _ := url.Parse(fullUrl)
+	query := reqUrl.Query()
+	for k, v := range pcClientSuffix() {
+		query.Set(k, v)
+	}
+	if encryptedParams != "" {
+		query.Set("params", encryptedParams)
+	}
+	reqUrl.RawQuery = query.Encode()
+	finalUrl := reqUrl.String()
+
+	// 3. 计算签名
+	dateOfGmt := time.Now().UTC().Format(http.TimeFormat)
+	signature := pcSignatureOfHmac(sessionSecret, sessionKey, "GET", fullUrl, dateOfGmt, encryptedParams)
+
+	// 4. 构建请求
+	req, err := http.NewRequest("GET", finalUrl, nil)
 	if err != nil {
 		return nil, apierror.NewApiErrorWithError(err)
 	}
+
+	// 5. 设置请求头
+	req.Header.Set("Date", dateOfGmt)
+	req.Header.Set("SessionKey", sessionKey)
+	req.Header.Set("Signature", signature)
+	req.Header.Set("X-Request-ID", fmt.Sprintf("%d", time.Now().UnixNano()))
+	req.Header.Set("Accept", "application/json;charset=UTF-8")
+
+	logger.Verboseln("CommitMultiUploadFile request URL: ", finalUrl)
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
