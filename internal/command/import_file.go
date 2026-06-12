@@ -190,7 +190,6 @@ func RunImportFiles(familyId int64, overwrite bool, panSavePath, localFilePath s
 
 func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFileListData, item ImportExportFileItem) (result, abort bool) {
 	panClient := config.Config.ActiveUser().PanClient()
-	activeUser := config.Config.ActiveUser()
 	panDir, fileName := path.Split(item.Path)
 	dataItem := dirMap[path.Dir(panDir)]
 	if isOverwrite {
@@ -239,8 +238,6 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 		}
 	}
 
-	// === 第一步：使用原始API尝试秒传（同账号秒传） ===
-	fileMd5 := strings.ToUpper(item.FileMd5)
 	var r *cloudpan.AppCreateUploadFileResult
 	var apierr *apierror.ApiError
 	ts := time.Now().Format("2006-01-02 15:04:05")
@@ -251,7 +248,7 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 		ParentFolderId: dataItem.Dir.FileId,
 		FileName:       fileName,
 		Size:           item.FileSize,
-		Md5:            fileMd5,
+		Md5:            strings.ToUpper(item.FileMd5),
 		LastWrite:      ts,
 		LocalPath:      "",
 		FamilyId:       familyId,
@@ -267,7 +264,6 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 	}
 
 	if r.FileDataExists == 1 {
-		// 同账号秒传成功
 		var er *apierror.ApiError
 		if familyId > 0 {
 			_, er = panClient.AppFamilyUploadFileCommit(familyId, r.FileCommitUrl, r.UploadFileId, r.XRequestId)
@@ -278,57 +274,12 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 			fmt.Println("秒传失败")
 			return false, false
 		} else {
-			fmt.Println("秒传成功")
 			return true, false
 		}
-	}
-
-	// === 第二步：同账号秒传失败，尝试新版API（initMultiUpload）跨账号秒传 ===
-	// 只有单分片文件才能计算正确的sliceMd5
-	sliceSize := item.SliceSize
-	sliceMd5 := item.SliceMd5
-	if sliceSize <= 0 {
-		sliceSize = computeSliceSize(item.FileSize)
-	}
-	if sliceMd5 == "" {
-		if item.FileSize > 0 && item.FileSize <= sliceSize {
-			// 单分片文件，sliceMd5 = fileMd5
-			sliceMd5 = fileMd5
-		} else {
-			// 多分片大文件，无法计算正确的sliceMd5，跳过新API
-			fmt.Printf("文件未曾上传，无法秒传\n")
-			return false, false
-		}
-	}
-
-	initResp, newApiErr := InitMultiUpload(
-		activeUser.AppToken,
-		dataItem.Dir.FileId,
-		fileName,
-		fmt.Sprintf("%d", item.FileSize),
-		fileMd5,
-		fmt.Sprintf("%d", sliceSize),
-		sliceMd5,
-		familyId,
-	)
-	if newApiErr == nil && initResp != nil {
-		if initResp.Data.FileDataExists == 1 {
-			// 跨账号秒传成功
-			_, commitErr := CommitMultiUploadFile(activeUser.AppToken, initResp.Data.UploadFileID, familyId, isOverwrite)
-			if commitErr != nil {
-				fmt.Println("秒传提交失败：", commitErr.Error())
-				return false, false
-			}
-			fmt.Println("秒传成功（跨账号）")
-			return true, false
-		}
-		logger.Verboseln("新API也未能秒传，FileDataExists=0")
 	} else {
-		logger.Verboseln("新API调用失败：", newApiErr)
+		fmt.Printf("文件未曾上传，无法秒传\n")
+		return false, false
 	}
-
-	fmt.Printf("文件未曾上传，无法秒传\n")
-	return false, false
 }
 
 func prepareMkdir(familyId int64, importFileItems []ImportExportFileItem) map[string]*dirFileListData {
