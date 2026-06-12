@@ -238,6 +238,49 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 		}
 	}
 
+	// 优先使用新API（支持跨账号秒传）
+	if item.SliceMd5 != "" && item.SliceSize > 0 {
+		fmt.Println("使用新API秒传（支持跨账号）...")
+		appToken := config.Config.ActiveUser().AppToken
+		initResult, err := NewAPIInitMultiUpload(
+			&appToken,
+			dataItem.Dir.FileId,
+			fileName,
+			fmt.Sprintf("%d", item.FileSize),
+			strings.ToUpper(item.FileMd5),
+			fmt.Sprintf("%d", item.SliceSize),
+			item.SliceMd5,
+		)
+		if err != nil {
+			fmt.Printf("新API初始化上传失败: %v\n", err)
+			return false, false
+		}
+
+		if initResult.Data.FileDataExists == 1 {
+			// 秒传成功，提交
+			commitResult, commitErr := NewAPICommitMultiUpload(
+				&appToken,
+				initResult.Data.UploadFileId,
+				strings.ToUpper(item.FileMd5),
+				item.SliceMd5,
+				isOverwrite,
+			)
+			if commitErr != nil {
+				fmt.Printf("新API提交失败: %v\n", commitErr)
+				return false, false
+			}
+			if commitResult.Code != "" && commitResult.Code != "SUCCESS" {
+				fmt.Printf("新API提交返回错误: %s - %s\n", commitResult.Code, commitResult.Message)
+				return false, false
+			}
+			return true, false
+		}
+
+		fmt.Printf("新API秒传失败（fileDataExists=0），文件数据在云端不存在\n")
+		return false, false
+	}
+
+	// 回退到旧API（仅支持同账号秒传）
 	var r *cloudpan.AppCreateUploadFileResult
 	var apierr *apierror.ApiError
 	ts := time.Now().Format("2006-01-02 15:04:05")

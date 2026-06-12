@@ -35,6 +35,8 @@ type (
 		FileSize   int64  `json:"size"`
 		Path       string `json:"path"`
 		LastOpTime string `json:"lastOpTime"`
+		SliceMd5   string `json:"sliceMd5,omitempty"`
+		SliceSize  int64  `json:"sliceSize,omitempty"`
 	}
 )
 
@@ -67,7 +69,7 @@ func CmdExport() cli.Command {
 			}
 
 			subArgs := c.Args()
-			RunExportFiles(parseFamilyId(c), c.Bool("ow"), subArgs[:len(subArgs)-1], subArgs[len(subArgs)-1])
+			RunExportFiles(parseFamilyId(c), c.Bool("ow"), c.Bool("calc-slice-md5"), subArgs[:len(subArgs)-1], subArgs[len(subArgs)-1])
 			return nil
 		},
 		Flags: []cli.Flag{
@@ -80,11 +82,15 @@ func CmdExport() cli.Command {
 				Usage: "家庭云ID",
 				Value: "",
 			},
+			cli.BoolFlag{
+				Name:  "calc-slice-md5",
+				Usage: "计算文件的分片MD5（sliceMd5），支持跨账号秒传。大文件需要下载文件数据来计算，可能耗时较长",
+			},
 		},
 	}
 }
 
-func RunExportFiles(familyId int64, overwrite bool, panPaths []string, saveLocalFilePath string) {
+func RunExportFiles(familyId int64, overwrite bool, calcSliceMd5 bool, panPaths []string, saveLocalFilePath string) {
 	activeUser := config.Config.ActiveUser()
 	panClient := activeUser.PanClient()
 
@@ -141,6 +147,26 @@ func RunExportFiles(familyId int64, overwrite bool, panPaths []string, saveLocal
 					Path:       fd.Path,
 					LastOpTime: fd.LastOpTime,
 				}
+
+				// 计算分片MD5（如果需要）
+				if calcSliceMd5 && fd.FileSize > 0 {
+					if fd.FileSize <= SliceSize {
+						// 小文件：sliceMd5 = fileMd5
+						item.SliceMd5 = fd.FileMd5
+						item.SliceSize = SliceSize
+					} else {
+						// 大文件：需要下载分片计算
+						fmt.Printf("\n计算文件分片MD5: %s (大小: %d)\n", fd.Path, fd.FileSize)
+						_, sliceMd5, calcErr := CalcFileSliceMd5(panClient, fd.FileId, fd.FileSize)
+						if calcErr != nil {
+							fmt.Printf("计算分片MD5失败: %v\n", calcErr)
+						} else {
+							item.SliceMd5 = sliceMd5
+							item.SliceSize = SliceSize
+						}
+					}
+				}
+
 				jstr, e := json.Marshal(&item)
 				if e != nil {
 					logger.Verboseln("to json string err")
