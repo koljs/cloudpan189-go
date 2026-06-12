@@ -248,39 +248,43 @@ func processOneImport(familyId int64, isOverwrite bool, dirMap map[string]*dirFi
 	if sliceSize <= 0 {
 		sliceSize = computeSliceSize(item.FileSize)
 	}
-	if sliceMd5 == "" && item.FileSize > 0 && item.FileSize <= sliceSize {
-		// 单分片文件，sliceMd5 = fileMd5
-		sliceMd5 = fileMd5
+	if sliceMd5 == "" {
+		if item.FileSize > 0 && item.FileSize <= sliceSize {
+			// 单分片文件，sliceMd5 = fileMd5
+			sliceMd5 = fileMd5
+		} else {
+			// 多分片大文件，无法计算真实的sliceMd5
+			// 但尝试用fileMd5作为sliceMd5，服务器可能仅凭fileMd5匹配
+			sliceMd5 = fileMd5
+		}
 	}
 
-	// 只要有sliceMd5就可以尝试新API
-	if sliceMd5 != "" {
-		initResp, apierr := InitMultiUpload(
-			activeUser.AppToken,
-			dataItem.Dir.FileId,
-			fileName,
-			fmt.Sprintf("%d", item.FileSize),
-			fileMd5,
-			fmt.Sprintf("%d", sliceSize),
-			sliceMd5,
-			familyId,
-		)
-		if apierr == nil && initResp != nil {
-			if initResp.Data.FileDataExists == 1 {
-				// 秒传成功，提交
-				_, commitErr := CommitMultiUploadFile(activeUser.AppToken, initResp.Data.UploadFileID, familyId, isOverwrite)
-				if commitErr != nil {
-					fmt.Println("秒传提交失败：", commitErr.Error())
-					return false, false
-				}
-				fmt.Println("秒传成功（跨账号）")
-				return true, false
+	// 尝试新API秒传
+	initResp, newApiErr := InitMultiUpload(
+		activeUser.AppToken,
+		dataItem.Dir.FileId,
+		fileName,
+		fmt.Sprintf("%d", item.FileSize),
+		fileMd5,
+		fmt.Sprintf("%d", sliceSize),
+		sliceMd5,
+		familyId,
+	)
+	if newApiErr == nil && initResp != nil {
+		if initResp.Data.FileDataExists == 1 {
+			// 秒传成功，提交
+			_, commitErr := CommitMultiUploadFile(activeUser.AppToken, initResp.Data.UploadFileID, familyId, isOverwrite)
+			if commitErr != nil {
+				fmt.Println("秒传提交失败：", commitErr.Error())
+				return false, false
 			}
-			// 新API也未能秒传，继续尝试旧API
-			logger.Verboseln("新API未能秒传，FileDataExists=0，尝试旧API")
-		} else {
-			logger.Verboseln("新API调用失败：", apierr)
+			fmt.Println("秒传成功（跨账号）")
+			return true, false
 		}
+		// 新API也未能秒传，继续尝试旧API
+		logger.Verboseln("新API未能秒传，FileDataExists=0，尝试旧API")
+	} else {
+		logger.Verboseln("新API调用失败：", newApiErr)
 	}
 
 	// === 第二步：回退到旧版API（createUploadFile）尝试同账号秒传 ===
